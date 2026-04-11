@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "start": "node server.js",
+    "dev:server": "npx nodemon server.js",
+    "dev:client": "npm --prefix frontend run dev",
+    "build:client": "npm --prefix frontend run build"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.1",
+    "ejs": "^5.0.2",
+    "express": "^5.2.1",
+    "mysql2": "^3.21.1",
+    "react-router-dom": "^7.14.1"
+  }
+}

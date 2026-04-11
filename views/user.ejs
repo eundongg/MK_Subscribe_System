@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원 리스트 - 관리 시스템</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <a href="/" class="home-link">🏠 메인 대시보드로 돌아가기</a>
+
+    <div class="list-container">
+        <header>
+            <h1>👥 회원 조회 리스트</h1>
+            <span class="count-badge">총 <%= users.length %> 명</span>
+        </header>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>이름</th>
+                    <th>아이디</th>
+                    <th>가입일</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if(users.length > 0) { %>
+                    <% users.forEach((user, index) => { %>
+                        <tr>
+                            <td><%= index + 1 %></td>
+                            <td class="user-name"><%= user.name %></td>
+                            <td><span class="login-id"><%= user.login_id %></span></td>
+                            <td style="color: #999; font-size: 13px;">
+                                <%= user.created_at ? new Date(user.created_at).toLocaleDateString() : '-' %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 50px; color: #ccc;">등록된 회원이 없습니다.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
