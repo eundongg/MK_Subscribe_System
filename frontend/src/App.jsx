@@ -4,6 +4,9 @@ import UsersPage from "./pages/UsersPage";
 import ProductsPage from "./pages/ProductsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import PaymentItemsPage from "./pages/PaymentItemsPage";
+import { CheckoutPage } from "./payment/Checkout";
+import { SuccessPage } from "./payment/Success";
+import { FailPage } from "./payment/Fail";
 
 function App() {
   return (
@@ -51,6 +54,9 @@ function App() {
           }
         />
         <Route path="/payments/:id" element={<PaymentItemsPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/success" element={<SuccessPage />} />
+        <Route path="/fail" element={<FailPage />} />
       </Routes>
     </main>
   );

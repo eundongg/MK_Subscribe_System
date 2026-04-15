@@ -234,6 +234,88 @@ td {
   color: var(--text-gray);
 }
 
+.btn-subscribe {
+  width: 100%;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirm-modal {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 14px;
+  background: var(--white);
+  padding: 22px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-modal h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+  color: var(--text-dark);
+}
+
+.confirm-product-name {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.confirm-product-price {
+  margin: 0 0 8px;
+  color: var(--green);
+  font-weight: 700;
+}
+
+.confirm-help-text {
+  margin: 0 0 16px;
+  color: var(--text-gray);
+  font-size: 13px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-modal-cancel,
+.btn-modal-confirm {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-modal-cancel {
+  background: #e5e9ef;
+  color: #384150;
+}
+
+.btn-modal-confirm {
+  background: var(--primary);
+  color: #fff;
+}
+
 @media (max-width: 900px) {
   .product-grid {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
