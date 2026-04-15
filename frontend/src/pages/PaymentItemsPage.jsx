@@ -22,7 +22,7 @@ function PaymentItemsPage() {
       </Link>
       <section className="list-container">
         <h2 style={{ borderBottom: "2px solid var(--primary)", paddingBottom: 10 }}>
-          🧾 상세 영수증 (No. {id})
+          상세 영수증 (No. {id})
         </h2>
         <div>
           {items.map((item) => (
