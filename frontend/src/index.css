@@ -1,14 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;700&display=swap");
 
 :root {
-  --primary: #4a90e2;
-  --bg: #f4f7f6;
+  --primary: #f36f21;
+  --bg: #f3f3f3;
   --white: #ffffff;
-  --text-dark: #333;
-  --text-gray: #777;
-  --orange: #ff9500;
-  --green: #34c759;
-  --border: #edf2f7;
+  --text-dark: #221e1f;
+  --text-gray: #58585a;
+  --orange: #f36f21;
+  --green: #f36f21;
+  --border: #d9d9da;
   --layout-max-width: min(1400px, calc(100vw - 40px));
 }
 
@@ -211,7 +211,7 @@ td {
   aspect-ratio: 16 / 9;
   object-fit: cover;
   display: block;
-  background: #e8edf2;
+  background: #efefef;
 }
 
 .product-body {
@@ -307,8 +307,8 @@ td {
 }
 
 .btn-modal-cancel {
-  background: #e5e9ef;
-  color: #384150;
+  background: #ececec;
+  color: var(--text-gray);
 }
 
 .btn-modal-confirm {
