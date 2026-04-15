@@ -31,7 +31,7 @@ a {
 
 .flex-center {
   justify-content: center;
-  min-height: calc(100vh - 80px);
+  height: 100vh;
   padding: 0;
   margin: 0;
   align-items: center;
@@ -76,7 +76,7 @@ a {
 .list-container {
   background: var(--white);
   width: 100%;
-  max-width: 900px;
+  max-width: 980px;
   padding: 30px;
   border-radius: 15px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
@@ -86,10 +86,12 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 18px;
 }
 
 h1 {
-  margin: 0 0 16px 0;
+  margin: 0;
+  color: var(--text-dark);
 }
 
 .count-badge {
@@ -110,6 +112,24 @@ td {
   border-bottom: 1px solid var(--border);
   text-align: left;
   padding: 12px;
+}
+
+th {
+  color: var(--text-gray);
+  font-weight: 700;
+}
+
+td {
+  color: var(--text-dark);
+}
+
+.user-name,
+.product-name {
+  font-weight: 700;
+}
+
+.login-id {
+  color: var(--text-gray);
 }
 
 .home-link,
@@ -152,6 +172,7 @@ td {
 
 .date-info {
   color: var(--text-gray);
+  margin: 0;
 }
 
 .product-grid {
@@ -212,4 +233,9 @@ td {
   .product-grid {
     grid-template-columns: 1fr;
   }
+}
+
+body.is-home {
+  padding: 0;
+  margin: 0;
 }
