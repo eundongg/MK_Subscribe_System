@@ -291,6 +291,38 @@ td {
   font-size: 13px;
 }
 
+.signup-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.signup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.signup-field input {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.signup-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-gray);
+}
+
 .confirm-actions {
   display: flex;
   justify-content: flex-end;
@@ -314,6 +346,11 @@ td {
 .btn-modal-confirm {
   background: var(--primary);
   color: #fff;
+}
+
+.btn-modal-confirm:disabled {
+  background: #b8b8b8;
+  cursor: not-allowed;
 }
 
 @media (max-width: 900px) {

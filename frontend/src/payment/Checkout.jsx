@@ -1,7 +1,7 @@
 import { loadTossPayments, ANONYMOUS } from "@tosspayments/tosspayments-sdk";
 import { useEffect, useState } from "react";
 
-const clientKey = "test_ck_BX7zk2yd8yjyg2jYxOeB3x9POLqK";
+const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
 const customerKey = "d6_31cXQIL0mW_cTgKheI";
 
 export function CheckoutPage() {

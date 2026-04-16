@@ -6,6 +6,13 @@ function ProductsPage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [signupForm, setSignupForm] = useState({
+    loginId: "",
+    password: "",
+    name: "",
+    isOver14: false,
+    agreeSignup: false,
+  });
 
   useEffect(() => {
     fetch("/api/products")
@@ -16,6 +23,31 @@ function ProductsPage() {
         setProducts([]);
       });
   }, []);
+
+  const handleOpenSubscribeModal = (product) => {
+    setSelectedProduct(product);
+    setSignupForm({
+      loginId: "",
+      password: "",
+      name: "",
+      isOver14: false,
+      agreeSignup: false,
+    });
+  };
+
+  const handleChangeField = (field, value) => {
+    setSignupForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const canProceedSubscribe =
+    signupForm.loginId.trim() !== "" &&
+    signupForm.password.trim() !== "" &&
+    signupForm.name.trim() !== "" &&
+    signupForm.isOver14 &&
+    signupForm.agreeSignup;
 
   return (
     <>
@@ -44,7 +76,7 @@ function ProductsPage() {
                 <button
                   type="button"
                   className="btn-subscribe"
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => handleOpenSubscribeModal(product)}
                 >
                   구독하기
                 </button>
@@ -63,6 +95,51 @@ function ProductsPage() {
               {selectedProduct.duration_months || "-"}개월
             </p>
             <p className="confirm-help-text">확인하면 결제 내역 화면으로 이동합니다.</p>
+            <div className="signup-fields">
+              <label className="signup-field">
+                회원 아이디
+                <input
+                  type="text"
+                  value={signupForm.loginId}
+                  onChange={(event) => handleChangeField("loginId", event.target.value)}
+                  placeholder="아이디를 입력하세요"
+                />
+              </label>
+              <label className="signup-field">
+                비밀번호
+                <input
+                  type="password"
+                  value={signupForm.password}
+                  onChange={(event) => handleChangeField("password", event.target.value)}
+                  placeholder="비밀번호를 입력하세요"
+                />
+              </label>
+              <label className="signup-field">
+                이름
+                <input
+                  type="text"
+                  value={signupForm.name}
+                  onChange={(event) => handleChangeField("name", event.target.value)}
+                  placeholder="이름을 입력하세요"
+                />
+              </label>
+              <label className="signup-check">
+                <input
+                  type="checkbox"
+                  checked={signupForm.isOver14}
+                  onChange={(event) => handleChangeField("isOver14", event.target.checked)}
+                />
+                만 14세 이상입니다.
+              </label>
+              <label className="signup-check">
+                <input
+                  type="checkbox"
+                  checked={signupForm.agreeSignup}
+                  onChange={(event) => handleChangeField("agreeSignup", event.target.checked)}
+                />
+                위 정보로 회원가입 및 이용약관에 동의합니다.
+              </label>
+            </div>
             <div className="confirm-actions">
               <button
                 type="button"
@@ -74,6 +151,7 @@ function ProductsPage() {
               <button
                 type="button"
                 className="btn-modal-confirm"
+                disabled={!canProceedSubscribe}
                 onClick={() => navigate("/checkout")} // 토스페이먼츠 api 호출
               >
                 구독 진행
