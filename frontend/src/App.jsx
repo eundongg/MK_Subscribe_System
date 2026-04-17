@@ -5,9 +5,9 @@ import ProductsPage from "./pages/storefront/ProductsPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
 import PaymentItemsPage from "./pages/admin/PaymentItemsPage";
 import { LegacyPaymentRedirect } from "./LegacyPaymentRedirect";
-import { CheckoutPage } from "./payment/Checkout";
-import { SuccessPage } from "./payment/Success";
-import { FailPage } from "./payment/Fail";
+import { CheckoutPage } from "./pages/payment/Checkout";
+import { SuccessPage } from "./pages/payment/Success";
+import { FailPage } from "./pages/payment/Fail";
 
 function App() {
   return (
