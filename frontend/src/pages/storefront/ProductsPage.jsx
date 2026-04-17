@@ -1,15 +1,11 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { AuthInlineActions } from "../../features/auth/components/AuthInlineActions";
-import { AuthModal } from "../../features/auth/components/AuthModal";
-import { useProductAuth } from "../../features/auth/hooks/useProductAuth";
+import { useNavigate } from "react-router-dom";
 import { PRODUCT_IMAGE_MAP } from "../../constants/productImageMap";
 
-function ProductsPage() {
+function ProductsPage({ currentUser, onRequireLogin }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const auth = useProductAuth();
 
   useEffect(() => {
     fetch("/api/store/products")
@@ -22,8 +18,8 @@ function ProductsPage() {
   }, []);
 
   const handleOpenSubscribeModal = (product) => {
-    if (!auth.currentUser) {
-      auth.openLogin("구독하려면 먼저 로그인해 주세요.");
+    if (!currentUser) {
+      onRequireLogin("구독하려면 먼저 로그인해 주세요.");
       return;
     }
     setSelectedProduct(product);
@@ -31,21 +27,10 @@ function ProductsPage() {
 
   return (
     <>
-      <Link to="/" className="home-link">
-        🏠 관리 대시보드로 돌아가기
-      </Link>
       <section className="list-container">
         <header>
           <h1>상품 목록</h1>
-          <div className="header-right">
-            <span className="count-badge">판매중 {products.length}종</span>
-            <AuthInlineActions
-              currentUser={auth.currentUser}
-              onLogin={auth.openLogin}
-              onSignup={auth.openSignup}
-              onLogout={auth.logout}
-            />
-          </div>
+          <span className="count-badge">판매중 {products.length}종</span>
         </header>
         <section className="product-grid">
           {products.map((product) => (
@@ -102,24 +87,6 @@ function ProductsPage() {
           </section>
         </div>
       ) : null}
-
-      <AuthModal
-        authMode={auth.authMode}
-        authMessage={auth.authMessage}
-        signupForm={auth.signupForm}
-        loginForm={auth.loginForm}
-        idCheck={auth.idCheck}
-        passwordMatches={auth.passwordMatches}
-        canProceedSignup={auth.canProceedSignup}
-        canProceedLogin={auth.canProceedLogin}
-        passwordMinLength={auth.passwordMinLength}
-        onClose={auth.closeAuthModal}
-        onChangeSignupField={auth.changeSignupField}
-        onChangeLoginField={auth.changeLoginField}
-        onCheckLoginId={auth.checkLoginId}
-        onSignup={auth.signup}
-        onLogin={auth.login}
-      />
     </>
   );
 }
