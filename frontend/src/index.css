@@ -113,6 +113,32 @@ h1 {
   font-size: 13px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-inline-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-user-text {
+  font-size: 13px;
+  color: var(--text-gray);
+}
+
+.text-link-btn {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -313,6 +339,16 @@ td {
   padding: 10px 12px;
   font-size: 14px;
   color: var(--text-dark);
+}
+
+.inline-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-field-row input {
+  flex: 1;
 }
 
 .signup-check {
