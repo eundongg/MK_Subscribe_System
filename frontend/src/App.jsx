@@ -14,6 +14,11 @@ import { FailPage } from "./pages/payment/Fail";
 
 function MainHome() {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const mockSubscriptionReport = [
+    { productName: "매경e신문", monthly: { "1개월": 32, "3개월": 18, "6개월": 10 } },
+    { productName: "매경이코노미", monthly: { "1개월": 21, "3개월": 14, "6개월": 7 } },
+    { productName: "지면신문", monthly: { "1개월": 16, "3개월": 12, "6개월": 5 } },
+  ];
 
   useEffect(() => {
     fetch("/api/store/products")
@@ -53,6 +58,37 @@ function MainHome() {
           </article>
         ))}
       </div>
+
+      <section className="main-report">
+        <div className="main-home-head">
+          <h1>구독 리포트</h1>
+          <span className="main-report-caption">가상 데이터 기준</span>
+        </div>
+        <div className="main-report-list">
+          {mockSubscriptionReport.map((item) => {
+            const maxCount = Math.max(...Object.values(item.monthly));
+            return (
+              <article className="main-report-card" key={item.productName}>
+                <h2>{item.productName}</h2>
+                <div className="main-report-metrics">
+                  {Object.entries(item.monthly).map(([period, count]) => (
+                    <div className="main-report-row" key={period}>
+                      <span className="main-report-period">{period}</span>
+                      <div className="main-report-bar-wrap">
+                        <div
+                          className="main-report-bar"
+                          style={{ width: `${Math.round((count / maxCount) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="main-report-count">{count}건</span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }
