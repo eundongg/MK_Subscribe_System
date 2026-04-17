@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthInlineActions } from "./features/auth/components/AuthInlineActions";
 import { AuthModal } from "./features/auth/components/AuthModal";
@@ -10,6 +11,51 @@ import { LegacyPaymentRedirect } from "./LegacyPaymentRedirect";
 import { CheckoutPage } from "./pages/payment/Checkout";
 import { SuccessPage } from "./pages/payment/Success";
 import { FailPage } from "./pages/payment/Fail";
+
+function MainHome() {
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/store/products")
+      .then((response) => response.json())
+      .then((products) => {
+        if (!Array.isArray(products) || products.length === 0) {
+          setRecommendedProducts([]);
+          return;
+        }
+        const shuffled = [...products].sort(() => Math.random() - 0.5);
+        setRecommendedProducts(shuffled.slice(0, 2));
+      })
+      .catch((error) => {
+        console.error(error);
+        setRecommendedProducts([]);
+      });
+  }, []);
+
+  return (
+    <section className="main-home">
+      <div className="main-home-head">
+        <h1>오늘의 추천 상품</h1>
+        <Link to="/products" className="text-link-btn">
+          전체 상품 보기
+        </Link>
+      </div>
+      <div className="main-reco-grid">
+        {recommendedProducts.map((product, index) => (
+          <article className="main-reco-card" key={product.product_no}>
+            <span className="main-reco-rank">추천 {index + 1}</span>
+            <div className="main-reco-body">
+              <h2>{product.product_name}</h2>
+              <span className="main-reco-desc">
+                {product.description || "지금 가장 많이 보는 구독 상품입니다."}
+              </span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function App() {
   const auth = useProductAuth();
@@ -38,7 +84,7 @@ function App() {
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<section className="main-empty" aria-label="main-empty" />} />
+          <Route path="/" element={<MainHome />} />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route
             path="/products"

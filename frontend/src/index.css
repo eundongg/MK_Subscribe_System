@@ -28,6 +28,9 @@ body {
 
 .app-shell {
   width: 100%;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
 }
 
 .top-nav {
@@ -86,14 +89,82 @@ body {
   margin-inline: auto;
 }
 
-.main-empty {
-  min-height: 720px;
+.main-home {
+  min-height: 320px;
+  background: var(--white);
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+}
+
+.main-home-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.main-home-head h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.main-reco-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.main-reco-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--white);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.main-reco-rank {
+  min-width: 54px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  background: #fff3eb;
+  border: 1px solid #ffd6bf;
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
+.main-reco-body {
+  min-width: 0;
+}
+
+.main-reco-body h2 {
+  margin: 0 0 18px;
+  font-size: 16px;
+}
+
+.main-reco-desc {
+  display: block;
+  margin: 0;
+  color: var(--text-gray);
+  font-size: 15px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .app-footer {
   width: 100%;
   max-width: var(--layout-max-width);
-  margin: 18px auto 0;
+  margin: auto auto 0;
+  padding-top: 18px;
   color: var(--text-gray);
   font-size: 12px;
   text-align: center;
