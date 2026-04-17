@@ -19,8 +19,7 @@ function query(sql, params = []) {
   });
 }
 
-// React 프론트에서 사용할 API
-app.get('/api/users', async (req, res) => {
+async function getUsers(_req, res) {
   try {
     const users = await query('SELECT * FROM user');
     res.json(users);
@@ -28,11 +27,9 @@ app.get('/api/users', async (req, res) => {
     console.error('회원 조회 에러:', err);
     res.status(500).json({ message: '회원 조회 실패' });
   }
-});
+}
 
-
-
-app.get('/api/products', async (req, res) => {
+async function getProducts(_req, res) {
   try {
     const products = await query('SELECT * FROM product');
     res.json(products);
@@ -40,9 +37,9 @@ app.get('/api/products', async (req, res) => {
     console.error('상품 조회 에러:', err);
     res.status(500).json({ message: '상품 조회 실패' });
   }
-});
+}
 
-app.get('/api/payments', async (req, res) => {
+async function getPayments(_req, res) {
   const sql = `
     SELECT
       p.payment_no,
@@ -62,9 +59,9 @@ app.get('/api/payments', async (req, res) => {
     console.error('결제 조회 에러:', err);
     res.status(500).json({ message: '결제 조회 실패' });
   }
-});
+}
 
-app.get('/api/payments/:id/items', async (req, res) => {
+async function getPaymentItems(req, res) {
   const paymentId = req.params.id;
   const sql = `
     SELECT
@@ -82,7 +79,22 @@ app.get('/api/payments/:id/items', async (req, res) => {
     console.error('상세 결제 조회 에러:', err);
     res.status(500).json({ message: '상세 결제 조회 실패' });
   }
-});
+}
+
+// Admin API (권장)
+app.get('/api/admin/users', getUsers);
+app.get('/api/admin/products', getProducts);
+app.get('/api/admin/payments', getPayments);
+app.get('/api/admin/payments/:id/items', getPaymentItems);
+
+// Storefront API (고객용)
+app.get('/api/store/products', getProducts);
+
+// Legacy API (호환용: 기존 프론트/문서/테스트가 남아있을 때)
+app.get('/api/users', getUsers);
+app.get('/api/products', getProducts);
+app.get('/api/payments', getPayments);
+app.get('/api/payments/:id/items', getPaymentItems);
 
 // React build 정적 파일 서빙 (3000 단일 프론트)
 const frontendDistPath = path.join(__dirname, 'frontend', 'dist');

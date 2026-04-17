@@ -4,7 +4,7 @@ function UsersPage() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetch("/api/users")
+    fetch("/api/admin/users")
       .then((response) => response.json())
       .then(setUsers)
       .catch((err) => {

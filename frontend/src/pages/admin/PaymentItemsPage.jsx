@@ -6,7 +6,7 @@ function PaymentItemsPage() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetch(`/api/payments/${id}/items`)
+    fetch(`/api/admin/payments/${id}/items`)
       .then((response) => response.json())
       .then(setItems)
       .catch((err) => {
@@ -17,7 +17,7 @@ function PaymentItemsPage() {
 
   return (
     <>
-      <Link to="/payments" className="back-link">
+      <Link to="/admin/payments" className="back-link">
         ← 결제 목록으로 돌아가기
       </Link>
       <section className="list-container">

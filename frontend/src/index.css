@@ -323,6 +323,30 @@ td {
   color: var(--text-gray);
 }
 
+.password-rules {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-gray);
+  font-weight: 400;
+}
+
+.field-error {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #c62828;
+  font-weight: 600;
+}
+
+.field-success {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
 .confirm-actions {
   display: flex;
   justify-content: flex-end;

@@ -5,7 +5,7 @@ function PaymentsPage() {
   const [payments, setPayments] = useState([]);
 
   useEffect(() => {
-    fetch("/api/payments")
+    fetch("/api/admin/payments")
       .then((response) => response.json())
       .then(setPayments)
       .catch((err) => {
@@ -54,7 +54,7 @@ function PaymentsPage() {
                   : "-"}
               </td>
               <td>
-                <Link to={`/payments/${payment.payment_no}`} className="btn-detail">
+                <Link to={`/admin/payments/${payment.payment_no}`} className="btn-detail">
                   내역 보기
                 </Link>
               </td>

@@ -1,6 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { PRODUCT_IMAGE_MAP } from "../constants/productImageMap";
+import { Link, useNavigate } from "react-router-dom";
+import { PRODUCT_IMAGE_MAP } from "../../constants/productImageMap";
+
+const PASSWORD_MIN_LENGTH = 8;
+
+function isPasswordValid(password) {
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return false;
+  }
+  if (/\s/.test(password)) {
+    return false;
+  }
+  const hasLetter = /\p{L}/u.test(password);
+  const hasDigit = /\p{N}/u.test(password);
+  return hasLetter && hasDigit;
+}
 
 function ProductsPage() {
   const navigate = useNavigate();
@@ -9,13 +23,14 @@ function ProductsPage() {
   const [signupForm, setSignupForm] = useState({
     loginId: "",
     password: "",
+    passwordConfirm: "",
     name: "",
     isOver14: false,
     agreeSignup: false,
   });
 
   useEffect(() => {
-    fetch("/api/products")
+    fetch("/api/store/products")
       .then((response) => response.json())
       .then(setProducts)
       .catch((err) => {
@@ -29,6 +44,7 @@ function ProductsPage() {
     setSignupForm({
       loginId: "",
       password: "",
+      passwordConfirm: "",
       name: "",
       isOver14: false,
       agreeSignup: false,
@@ -36,24 +52,41 @@ function ProductsPage() {
   };
 
   const handleChangeField = (field, value) => {
-    setSignupForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setSignupForm((prev) => {
+      if (field === "password") {
+        return {
+          ...prev,
+          password: value,
+          passwordConfirm: "",
+        };
+      }
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
   };
+
+  const passwordMatches =
+    signupForm.passwordConfirm.trim() !== "" &&
+    signupForm.password === signupForm.passwordConfirm;
 
   const canProceedSubscribe =
     signupForm.loginId.trim() !== "" &&
-    signupForm.password.trim() !== "" &&
+    isPasswordValid(signupForm.password) &&
+    passwordMatches &&
     signupForm.name.trim() !== "" &&
     signupForm.isOver14 &&
     signupForm.agreeSignup;
 
   return (
     <>
+      <Link to="/" className="home-link">
+        🏠 관리 대시보드로 돌아가기
+      </Link>
       <section className="list-container">
         <header>
-          <h1>상품 목록 관리</h1>
+          <h1>상품 목록</h1>
           <span className="count-badge">판매중 {products.length}종</span>
         </header>
         <section className="product-grid">
@@ -97,7 +130,7 @@ function ProductsPage() {
             <p className="confirm-help-text">확인하면 결제 내역 화면으로 이동합니다.</p>
             <div className="signup-fields">
               <label className="signup-field">
-                회원 아이디
+                등록 아이디
                 <input
                   type="text"
                   value={signupForm.loginId}
@@ -113,6 +146,26 @@ function ProductsPage() {
                   onChange={(event) => handleChangeField("password", event.target.value)}
                   placeholder="비밀번호를 입력하세요"
                 />
+                <p className="password-rules">
+                  {PASSWORD_MIN_LENGTH}자 이상, 공백 없음, 영문(또는 한글)과 숫자를 함께 포함해야 합니다.
+                </p>
+              </label>
+              <label className="signup-field">
+                비밀번호 확인
+                <input
+                  type="password"
+                  value={signupForm.passwordConfirm}
+                  onChange={(event) => handleChangeField("passwordConfirm", event.target.value)}
+                  placeholder="비밀번호를 다시 입력하세요"
+                />
+                {signupForm.passwordConfirm.length > 0 && !passwordMatches ? (
+                  <p className="field-error">비밀번호가 일치하지 않습니다.</p>
+                ) : null}
+                {signupForm.passwordConfirm.length > 0 &&
+                passwordMatches &&
+                isPasswordValid(signupForm.password) ? (
+                  <p className="field-success">비밀번호가 일치합니다.</p>
+                ) : null}
               </label>
               <label className="signup-field">
                 이름
@@ -152,7 +205,7 @@ function ProductsPage() {
                 type="button"
                 className="btn-modal-confirm"
                 disabled={!canProceedSubscribe}
-                onClick={() => navigate("/checkout")} // 토스페이먼츠 api 호출
+                onClick={() => navigate("/checkout")}
               >
                 구독 진행
               </button>

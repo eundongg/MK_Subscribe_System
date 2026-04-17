@@ -1,9 +1,10 @@
-import { Link, Route, Routes } from "react-router-dom";
-import HomePage from "./pages/HomePage";
-import UsersPage from "./pages/UsersPage";
-import ProductsPage from "./pages/ProductsPage";
-import PaymentsPage from "./pages/PaymentsPage";
-import PaymentItemsPage from "./pages/PaymentItemsPage";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
+import HomePage from "./pages/admin/HomePage";
+import UsersPage from "./pages/admin/UsersPage";
+import ProductsPage from "./pages/storefront/ProductsPage";
+import PaymentsPage from "./pages/admin/PaymentsPage";
+import PaymentItemsPage from "./pages/admin/PaymentItemsPage";
+import { LegacyPaymentRedirect } from "./LegacyPaymentRedirect";
 import { CheckoutPage } from "./payment/Checkout";
 import { SuccessPage } from "./payment/Success";
 import { FailPage } from "./payment/Fail";
@@ -20,8 +21,14 @@ function App() {
             </div>
           }
         />
+        <Route path="/users" element={<Navigate to="/admin/users" replace />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/admin/products" element={<Navigate to="/products" replace />} />
+        <Route path="/payments" element={<Navigate to="/admin/payments" replace />} />
+        <Route path="/payments/:id" element={<LegacyPaymentRedirect />} />
+
         <Route
-          path="/users"
+          path="/admin/users"
           element={
             <>
               <Link to="/" className="home-link">
@@ -32,18 +39,7 @@ function App() {
           }
         />
         <Route
-          path="/products"
-          element={
-            <>
-              <Link to="/" className="home-link">
-                🏠 메인 대시보드로 돌아가기
-              </Link>
-              <ProductsPage />
-            </>
-          }
-        />
-        <Route
-          path="/payments"
+          path="/admin/payments"
           element={
             <>
               <Link to="/" className="home-link">
@@ -53,7 +49,7 @@ function App() {
             </>
           }
         />
-        <Route path="/payments/:id" element={<PaymentItemsPage />} />
+        <Route path="/admin/payments/:id" element={<PaymentItemsPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/fail" element={<FailPage />} />
