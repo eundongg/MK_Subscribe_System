@@ -10,10 +10,10 @@ export function AuthInlineActions({ currentUser, onLogin, onSignup, onLogout }) 
         </>
       ) : (
         <>
-          <button type="button" className="text-link-btn" onClick={onLogin}>
+          <button type="button" className="text-link-btn" onClick={() => onLogin()}>
             로그인
           </button>
-          <button type="button" className="text-link-btn" onClick={onSignup}>
+          <button type="button" className="text-link-btn" onClick={() => onSignup()}>
             회원가입
           </button>
         </>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const PASSWORD_MIN_LENGTH = 8;
 
@@ -43,7 +43,7 @@ export function useProductAuth() {
   const [idCheck, setIdCheck] = useState(INITIAL_ID_CHECK);
 
   useEffect(() => {
-    fetch("/api/auth/me")
+    fetch("/api/auth/me", { credentials: "include" })
       .then((response) => response.json())
       .then((data) => setCurrentUser(data.user || null))
       .catch(() => {
@@ -74,9 +74,9 @@ export function useProductAuth() {
     setIdCheck(INITIAL_ID_CHECK);
   };
 
-  const openLogin = (message = "") => {
+  const openLogin = (message) => {
     setAuthMode("login");
-    setAuthMessage(message);
+    setAuthMessage(typeof message === "string" ? message : "");
     setLoginForm(INITIAL_LOGIN_FORM);
   };
 
@@ -124,7 +124,9 @@ export function useProductAuth() {
     }
 
     try {
-      const response = await fetch(`/api/auth/check-login-id?loginId=${encodeURIComponent(loginId)}`);
+      const response = await fetch(`/api/auth/check-login-id?loginId=${encodeURIComponent(loginId)}`, {
+        credentials: "include",
+      });
       const data = await response.json();
       if (!response.ok) {
         setIdCheck({
@@ -166,6 +168,7 @@ export function useProductAuth() {
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -198,6 +201,7 @@ export function useProductAuth() {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -221,45 +225,32 @@ export function useProductAuth() {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
       setCurrentUser(null);
     } catch (error) {
       console.error(error);
     }
   };
 
-  return useMemo(
-    () => ({
-      authMode,
-      authMessage,
-      currentUser,
-      signupForm,
-      loginForm,
-      idCheck,
-      passwordMatches,
-      canProceedSignup,
-      canProceedLogin,
-      passwordMinLength: PASSWORD_MIN_LENGTH,
-      openSignup,
-      openLogin,
-      closeAuthModal,
-      changeSignupField,
-      changeLoginField,
-      checkLoginId,
-      signup,
-      login,
-      logout,
-    }),
-    [
-      authMessage,
-      authMode,
-      canProceedLogin,
-      canProceedSignup,
-      currentUser,
-      idCheck,
-      loginForm,
-      passwordMatches,
-      signupForm,
-    ]
-  );
+  return {
+    authMode,
+    authMessage,
+    currentUser,
+    signupForm,
+    loginForm,
+    idCheck,
+    passwordMatches,
+    canProceedSignup,
+    canProceedLogin,
+    passwordMinLength: PASSWORD_MIN_LENGTH,
+    openSignup,
+    openLogin,
+    closeAuthModal,
+    changeSignupField,
+    changeLoginField,
+    checkLoginId,
+    signup,
+    login,
+    logout,
+  };
 }

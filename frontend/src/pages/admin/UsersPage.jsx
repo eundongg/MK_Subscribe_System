@@ -4,9 +4,16 @@ function UsersPage() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetch("/api/admin/users")
-      .then((response) => response.json())
-      .then(setUsers)
+    fetch("/api/admin/users", { credentials: "include" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          console.error(data?.message || response.statusText);
+          setUsers([]);
+          return;
+        }
+        setUsers(Array.isArray(data) ? data : []);
+      })
       .catch((err) => {
         console.error(err);
         setUsers([]);
