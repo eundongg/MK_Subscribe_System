@@ -56,11 +56,8 @@ function MainHome({ currentUser }) {
         ))}
       </div>
 
-      {currentUser ? (
-        <SubscriptionAccumulatedSection currentUser={currentUser} />
-      ) : (
-        <TodayPopularProducts />
-      )}
+      <TodayPopularProducts />
+      {currentUser ? <SubscriptionAccumulatedSection currentUser={currentUser} /> : null}
     </section>
   );
 }
@@ -76,6 +73,7 @@ function App() {
           <span className="brand-text">매경 구독 서비스</span>
         </Link>
         <nav className="top-nav-links">
+          <Link to="/introduction">소개</Link>
           <Link to="/products">상품</Link>
           <Link to="/admin/users">회원</Link>
           <Link to="/admin/payments">결제내역</Link>

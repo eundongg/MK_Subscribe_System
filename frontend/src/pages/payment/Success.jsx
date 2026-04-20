@@ -73,10 +73,6 @@ export function SuccessPage() {
             <dt>결제 금액</dt>
             <dd>{amount.toLocaleString()}원</dd>
           </div>
-          <div>
-            <dt>결제키</dt>
-            <dd title={paymentKey}>{maskedPaymentKey}</dd>
-          </div>
         </dl>
 
         <div className="payment-result-actions">
