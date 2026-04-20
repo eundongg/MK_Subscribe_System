@@ -162,7 +162,7 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
     return null;
   }
 
-  const title = "총 구독 개월";
+  const title = "구독 리포트";
   const caption =
     "결제한 각 구독의 상품 플랜 개월 수를 상품별로 더한 값입니다. 막대는 상품별로 색이 다릅니다.";
 

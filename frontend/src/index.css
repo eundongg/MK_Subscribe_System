@@ -260,6 +260,109 @@ body {
   color: #b42318;
 }
 
+.payment-result-page {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 24px 12px;
+}
+
+.payment-result-card {
+  width: min(760px, 100%);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  padding: 24px;
+}
+
+.payment-result-card h1 {
+  margin: 10px 0 6px;
+  font-size: 28px;
+  color: var(--text-dark);
+}
+
+.payment-result-badge {
+  display: inline-block;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 6px 10px;
+  border: 1px solid #b8d4f0;
+  color: #1565c0;
+  background: #e8f1fb;
+}
+
+.payment-result-description {
+  margin: 0 0 18px;
+  color: var(--text-gray);
+}
+
+.payment-result-summary {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.payment-result-summary > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.payment-result-summary > div + div {
+  border-top: 1px solid #f0f0f0;
+}
+
+.payment-result-summary dt {
+  color: var(--text-gray);
+  font-size: 13px;
+}
+
+.payment-result-summary dd {
+  margin: 0;
+  color: var(--text-dark);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.payment-result-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.payment-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  color: var(--text-dark);
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.payment-link-btn.primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.payment-result-caption {
+  margin: 12px 0 0;
+  color: var(--text-gray);
+  font-size: 12px;
+}
+
 .app-footer {
   width: 100%;
   max-width: var(--layout-max-width);
