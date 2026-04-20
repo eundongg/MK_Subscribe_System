@@ -248,11 +248,66 @@ async function getPaymentItems(req, res) {
   }
 }
 
+/** 상품별 구매 구독 플랜 개월(duration_months) 합계. 본인만 조회. */
+async function getMySubscriptionAccumulated(req, res) {
+  const memberNo = req.session.user.member_no;
+  const sql = `
+    SELECT
+      pr.product_no,
+      pr.product_name,
+      SUM(pr.duration_months) AS total_subscription_months
+    FROM payment_items pi
+    INNER JOIN product pr ON pr.product_no = pi.product_no
+    WHERE pi.member_no = ?
+    GROUP BY pr.product_no, pr.product_name
+    HAVING SUM(pr.duration_months) > 0
+    ORDER BY pr.product_name ASC
+  `;
+
+  try {
+    const rows = await query(sql, [memberNo]);
+    res.json(rows);
+  } catch (err) {
+    console.error('내 누적 이용 조회 에러:', err);
+    res.status(500).json({ message: '누적 이용 정보를 불러오지 못했습니다.' });
+  }
+}
+
+/** 전 회원 구독 합산 개월(상품 플랜 duration_months 합)이 큰 상품 순. 비로그인 메인 카드용. */
+async function getPopularProducts(_req, res) {
+  const sql = `
+    SELECT
+      p.product_no,
+      p.product_name,
+      p.description,
+      p.price,
+      p.duration_months
+    FROM product p
+    LEFT JOIN (
+      SELECT pi.product_no, SUM(pr2.duration_months) AS total_m
+      FROM payment_items pi
+      INNER JOIN product pr2 ON pr2.product_no = pi.product_no
+      GROUP BY pi.product_no
+    ) t ON t.product_no = p.product_no
+    ORDER BY COALESCE(t.total_m, 0) DESC, p.product_name ASC
+    LIMIT 12
+  `;
+
+  try {
+    const rows = await query(sql);
+    res.json(rows);
+  } catch (err) {
+    console.error('인기 상품 조회 에러:', err);
+    res.status(500).json({ message: '인기 상품을 불러오지 못했습니다.' });
+  }
+}
+
 app.post('/api/auth/signup', signup);
 app.post('/api/auth/login', login);
 app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', me);
 app.get('/api/auth/check-login-id', checkLoginId);
+app.get('/api/me/subscription-accumulated', requireAuth, getMySubscriptionAccumulated);
 
 // Admin API (권장)
 app.use('/api/admin', requireAuth);
@@ -263,6 +318,7 @@ app.get('/api/admin/payments/:id/items', getPaymentItems);
 
 // Storefront API (고객용)
 app.get('/api/store/products', getProducts);
+app.get('/api/store/popular-products', getPopularProducts);
 
 // Legacy API (호환용: 기존 프론트/문서/테스트가 남아있을 때)
 app.get('/api/users', getUsers);

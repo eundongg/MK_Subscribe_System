@@ -138,6 +138,12 @@ body {
   padding: 4px 8px;
 }
 
+.main-reco-card-popular .popular-rank {
+  color: #1565c0;
+  background: #e8f1fb;
+  border-color: #b8d4f0;
+}
+
 .main-reco-body {
   min-width: 0;
 }
@@ -225,6 +231,33 @@ body {
   font-size: 12px;
   color: var(--text-dark);
   text-align: right;
+}
+
+.subscription-chart-wrap {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.subscription-chart-stacked .apexcharts-legend {
+  padding-top: 8px;
+  justify-content: center;
+}
+
+.subscription-chart-wrap .apexcharts-canvas {
+  margin: 0 auto;
+}
+
+.subscription-chart-status {
+  margin: 12px 0 0;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-gray);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.subscription-chart-error {
+  color: #b42318;
 }
 
 .app-footer {
