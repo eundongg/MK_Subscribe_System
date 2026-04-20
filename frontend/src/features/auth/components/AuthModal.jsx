@@ -19,6 +19,14 @@ export function AuthModal({
     return null;
   }
 
+  const handleLoginSubmit = (event) => {
+    event.preventDefault();
+    if (!canProceedLogin) {
+      return;
+    }
+    onLogin();
+  };
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <section className="confirm-modal" onClick={(event) => event.stopPropagation()}>
@@ -100,44 +108,53 @@ export function AuthModal({
             </div>
           </>
         ) : (
-          <>
+          <form className="signup-fields" onSubmit={handleLoginSubmit}>
             <p className="confirm-help-text">구독을 진행하려면 로그인해 주세요.</p>
-            <div className="signup-fields">
-              <label className="signup-field">
-                아이디
-                <input
-                  type="text"
-                  value={loginForm.loginId}
-                  onChange={(event) => onChangeLoginField("loginId", event.target.value)}
-                  placeholder="아이디를 입력하세요"
-                />
-              </label>
-              <label className="signup-field">
-                비밀번호
-                <input
-                  type="password"
-                  value={loginForm.password}
-                  onChange={(event) => onChangeLoginField("password", event.target.value)}
-                  placeholder="비밀번호를 입력하세요"
-                />
-              </label>
+            <label className="signup-field">
+              아이디
+              <input
+                type="text"
+                value={loginForm.loginId}
+                onChange={(event) => onChangeLoginField("loginId", event.target.value)}
+                placeholder="아이디를 입력하세요"
+              />
+            </label>
+            <label className="signup-field">
+              비밀번호
+              <input
+                type="password"
+                value={loginForm.password}
+                onChange={(event) => onChangeLoginField("password", event.target.value)}
+                placeholder="비밀번호를 입력하세요"
+              />
+            </label>
+            {authMessage ? <p className="field-error">{authMessage}</p> : null}
+            <div className="confirm-actions">
+              <button type="button" className="btn-modal-cancel" onClick={onClose}>
+                취소
+              </button>
+              <button type="submit" className="btn-modal-confirm" disabled={!canProceedLogin}>
+                로그인
+              </button>
             </div>
-          </>
+          </form>
         )}
-        {authMessage ? <p className="field-error">{authMessage}</p> : null}
-        <div className="confirm-actions">
-          <button type="button" className="btn-modal-cancel" onClick={onClose}>
-            취소
-          </button>
-          <button
-            type="button"
-            className="btn-modal-confirm"
-            disabled={authMode === "signup" ? !canProceedSignup : !canProceedLogin}
-            onClick={authMode === "signup" ? onSignup : onLogin}
-          >
-            {authMode === "signup" ? "회원가입" : "로그인"}
-          </button>
-        </div>
+        {authMode === "signup" ? <>{authMessage ? <p className="field-error">{authMessage}</p> : null}</> : null}
+        {authMode === "signup" ? (
+          <div className="confirm-actions">
+            <button type="button" className="btn-modal-cancel" onClick={onClose}>
+              취소
+            </button>
+            <button
+              type="button"
+              className="btn-modal-confirm"
+              disabled={!canProceedSignup}
+              onClick={onSignup}
+            >
+              회원가입
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );
