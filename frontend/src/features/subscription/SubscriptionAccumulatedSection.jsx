@@ -38,17 +38,17 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
     setLoadError("");
 
     fetch("/api/me/subscription-accumulated", { credentials: "include" })
-      .then(async (response) => {
-        const data = await response.json().catch(() => null);
-        if (!response.ok) {
-          const msg = data?.message || "데이터를 불러오지 못했습니다.";
+      .then(async (accumulatedResponse) => {
+        const accumulatedData = await accumulatedResponse.json().catch(() => null);
+        if (!accumulatedResponse.ok) {
+          const msg = accumulatedData?.message || "데이터를 불러오지 못했습니다.";
           throw new Error(msg);
         }
-        return Array.isArray(data) ? data : [];
+        return Array.isArray(accumulatedData) ? accumulatedData : [];
       })
-      .then((list) => {
+      .then((items) => {
         if (!cancelled) {
-          setRows(list);
+          setRows(items);
         }
       })
       .catch((err) => {

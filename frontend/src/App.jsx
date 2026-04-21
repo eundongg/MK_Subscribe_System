@@ -16,6 +16,7 @@ import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
 
 function MainHome({ currentUser }) {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [currentSubscriptionDays, setCurrentSubscriptionDays] = useState(0);
 
   useEffect(() => {
     fetch("/api/store/products")
@@ -34,8 +35,44 @@ function MainHome({ currentUser }) {
       });
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setCurrentSubscriptionDays(0);
+      return;
+    }
+
+    let cancelled = false;
+    fetch("/api/me/subscription-current-days", { credentials: "include" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          return 0;
+        }
+        return Number(data?.current_subscription_days) || 0;
+      })
+      .then((days) => {
+        if (!cancelled) {
+          setCurrentSubscriptionDays(days);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCurrentSubscriptionDays(0);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.member_no]);
+
   return (
     <section className="main-home">
+      {currentUser ? (
+        <p className="subscription-current-days">
+          🔔현재 구독 <strong>{Math.max(0, currentSubscriptionDays).toLocaleString()}일째</strong>
+        </p>
+      ) : null}
       <div className="main-home-head">
         <h1>오늘의 추천 상품</h1>
         <Link to="/products" className="text-link-btn">

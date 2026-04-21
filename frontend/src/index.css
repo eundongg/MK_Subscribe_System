@@ -260,6 +260,20 @@ body {
   color: #b42318;
 }
 
+.subscription-current-days {
+  margin: 10px 0 25px;
+  padding: 10px 12px;
+  border: 1px solid #ffe0cc;
+  background: #fff6ef;
+  border-radius: 10px;
+  color: var(--text-dark);
+  font-size: 14px;
+}
+
+.subscription-current-days strong {
+  color: var(--primary);
+}
+
 .apex-tooltip-custom {
   padding: 8px 10px;
   font-size: 12px;

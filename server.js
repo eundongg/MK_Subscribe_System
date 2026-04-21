@@ -273,6 +273,28 @@ async function getMySubscriptionAccumulated(req, res) {
   }
 }
 
+/** 현재 진행 중(ING) 구독 기준, 가장 오래된 시작일로부터 경과 일수(첫날=1일). */
+async function getMyCurrentSubscriptionDays(req, res) {
+  const memberNo = req.session.user.member_no;
+  const sql = `
+    SELECT
+      GREATEST(1, DATEDIFF(CURDATE(), MIN(pi.start_date)) + 1) AS current_subscription_days
+    FROM payment_items pi
+    WHERE pi.member_no = ?
+      AND pi.status = 'ING'
+      AND pi.start_date <= CURDATE()
+  `;
+
+  try {
+    const rows = await query(sql, [memberNo]);
+    const days = Number(rows?.[0]?.current_subscription_days) || 0;
+    res.json({ current_subscription_days: days });
+  } catch (err) {
+    console.error('현재 구독 일수 조회 에러:', err);
+    res.status(500).json({ message: '현재 구독 일수 정보를 불러오지 못했습니다.' });
+  }
+}
+
 /** 전 회원 구독 합산 개월(상품 플랜 duration_months 합)이 큰 상품 순. 비로그인 메인 카드용. */
 async function getPopularProducts(_req, res) {
   const sql = `
@@ -308,6 +330,7 @@ app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', me);
 app.get('/api/auth/check-login-id', checkLoginId);
 app.get('/api/me/subscription-accumulated', requireAuth, getMySubscriptionAccumulated);
+app.get('/api/me/subscription-current-days', requireAuth, getMyCurrentSubscriptionDays);
 
 // Admin API (권장)
 app.use('/api/admin', requireAuth);
