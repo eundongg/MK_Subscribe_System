@@ -15,6 +15,16 @@ import { SubscriptionAccumulatedSection } from "./features/subscription/Subscrip
 import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
 import IntroductionPage from "./pages/IntroductionPage";
 
+function AdminRoute({ currentUser, children }) {
+  if (!currentUser) {
+    return <Navigate to="/" replace />;
+  }
+  if (!currentUser.is_admin) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 function MainHome({ currentUser }) {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [currentSubscriptionDays, setCurrentSubscriptionDays] = useState(0);
@@ -113,8 +123,12 @@ function App() {
         <nav className="top-nav-links">
           <Link to="/introduction">소개</Link>
           <Link to="/products">상품</Link>
-          <Link to="/admin/users">회원</Link>
-          <Link to="/admin/payments">결제내역</Link>
+          {auth.currentUser?.is_admin ? (
+            <>
+              <Link to="/admin/users">회원</Link>
+              <Link to="/admin/payments">결제내역</Link>
+            </>
+          ) : null}
         </nav>
         <div className="top-nav-auth">
           <AuthInlineActions
@@ -139,9 +153,30 @@ function App() {
           <Route path="/payments" element={<Navigate to="/admin/payments" replace />} />
           <Route path="/payments/:id" element={<LegacyPaymentRedirect />} />
 
-          <Route path="/admin/users" element={<UsersPage />} />
-          <Route path="/admin/payments" element={<PaymentsPage />} />
-          <Route path="/admin/payments/:id" element={<PaymentItemsPage />} />
+          <Route
+            path="/admin/users"
+            element={
+              <AdminRoute currentUser={auth.currentUser}>
+                <UsersPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/payments"
+            element={
+              <AdminRoute currentUser={auth.currentUser}>
+                <PaymentsPage />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/admin/payments/:id"
+            element={
+              <AdminRoute currentUser={auth.currentUser}>
+                <PaymentItemsPage />
+              </AdminRoute>
+            }
+          />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/success" element={<SuccessPage />} />
           <Route path="/fail" element={<FailPage />} />

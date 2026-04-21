@@ -45,6 +45,7 @@ function toSessionUser(user) {
     login_id: user.login_id,
     name: user.name,
     status: user.status,
+    is_admin: Boolean(user.is_admin),
   };
 }
 
@@ -63,6 +64,18 @@ function isPasswordValid(password) {
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     res.status(401).json({ message: '로그인이 필요합니다.' });
+    return;
+  }
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.session.user) {
+    res.status(401).json({ message: '로그인이 필요합니다.' });
+    return;
+  }
+  if (!req.session.user.is_admin) {
+    res.status(403).json({ message: '관리자 권한이 필요합니다.' });
     return;
   }
   next();
@@ -97,7 +110,7 @@ async function signup(req, res) {
     );
 
     const users = await query(
-      'SELECT member_no, login_id, name, status FROM user WHERE member_no = ? LIMIT 1',
+      'SELECT member_no, login_id, name, status, is_admin FROM user WHERE member_no = ? LIMIT 1',
       [insertResult.insertId]
     );
     const user = users[0];
@@ -118,7 +131,7 @@ async function login(req, res) {
 
   try {
     const users = await query(
-      'SELECT member_no, login_id, password, name, status FROM user WHERE login_id = ? LIMIT 1',
+      'SELECT member_no, login_id, password, name, status, is_admin FROM user WHERE login_id = ? LIMIT 1',
       [loginId]
     );
     if (users.length === 0) {
@@ -166,8 +179,29 @@ function logout(req, res) {
   });
 }
 
-function me(req, res) {
-  res.json({ user: req.session.user || null });
+async function me(req, res) {
+  if (!req.session.user) {
+    res.json({ user: null });
+    return;
+  }
+
+  try {
+    const rows = await query(
+      'SELECT member_no, login_id, name, status, is_admin FROM user WHERE member_no = ? LIMIT 1',
+      [req.session.user.member_no]
+    );
+    if (rows.length === 0) {
+      req.session.user = null;
+      res.json({ user: null });
+      return;
+    }
+    const sessionUser = toSessionUser(rows[0]);
+    req.session.user = sessionUser;
+    res.json({ user: sessionUser });
+  } catch (err) {
+    console.error('내 정보 조회 에러:', err);
+    res.status(500).json({ message: '내 정보 조회에 실패했습니다.' });
+  }
 }
 
 async function checkLoginId(req, res) {
@@ -333,7 +367,7 @@ app.get('/api/me/subscription-accumulated', requireAuth, getMySubscriptionAccumu
 app.get('/api/me/subscription-current-days', requireAuth, getMyCurrentSubscriptionDays);
 
 // Admin API (권장)
-app.use('/api/admin', requireAuth);
+app.use('/api/admin', requireAdmin);
 app.get('/api/admin/users', getUsers);
 app.get('/api/admin/products', getProducts);
 app.get('/api/admin/payments', getPayments);
