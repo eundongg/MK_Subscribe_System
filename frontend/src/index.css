@@ -97,6 +97,20 @@ body {
   padding: 24px;
 }
 
+.intro-page {
+  background: var(--white);
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  padding: 16px;
+}
+
+.intro-image {
+  display: block;
+  width: 99%;
+  height: auto;
+  border-radius: 10px;
+}
+
 .main-home-head {
   display: flex;
   align-items: center;

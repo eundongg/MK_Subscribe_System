@@ -13,6 +13,7 @@ import { SuccessPage } from "./pages/payment/Success";
 import { FailPage } from "./pages/payment/Fail";
 import { SubscriptionAccumulatedSection } from "./features/subscription/SubscriptionAccumulatedSection";
 import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
+import IntroductionPage from "./pages/IntroductionPage";
 
 function MainHome({ currentUser }) {
   const [recommendedProducts, setRecommendedProducts] = useState([]);
@@ -128,6 +129,7 @@ function App() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<MainHome currentUser={auth.currentUser} />} />
+          <Route path="/introduction" element={<IntroductionPage />} />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route
             path="/products"
