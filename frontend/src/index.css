@@ -260,6 +260,12 @@ body {
   color: #b42318;
 }
 
+.apex-tooltip-custom {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .payment-result-page {
   min-height: 320px;
   display: grid;

@@ -146,12 +146,24 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
           markers: { width: 10, height: 10, radius: 2 },
         },
         tooltip: {
-          shared: true,
-          intersect: false,
-          y: {
-            formatter(val) {
-              return `${Math.round(Number(val))}개월`;
-            },
+          shared: false,
+          intersect: true, // 개별 상품 툴팁 표시
+          custom({ series, seriesIndex, dataPointIndex, w }) {
+            const months = Math.round(Number(series?.[seriesIndex]?.[dataPointIndex]) || 0);
+            const allSeries = w?.config?.series ?? [];
+            const total = allSeries.reduce((sum, s) => {
+              const v = Number(s?.data?.[dataPointIndex]) || 0;
+              return sum + v;
+            }, 0);
+            const ratio = total > 0 ? (months / total) * 100 : 0;
+            const productName = w?.globals?.seriesNames?.[seriesIndex] || "상품";
+
+            return `
+              <div class="apex-tooltip-custom">
+                <strong>${productName}</strong><br/>
+                ${months}개월 (${ratio.toFixed(1)}%)
+              </div>
+            `;
           },
         },
       },
