@@ -80,4 +80,4 @@ jobs:
           git ls-remote gitlab HEAD
 
           # main 브랜치만 동기화 (미러/태그 전체 push 아님)
-          git push -v --force gitlab main:main
+          git push -v gitlab main:main
