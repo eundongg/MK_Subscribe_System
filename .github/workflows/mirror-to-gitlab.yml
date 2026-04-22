@@ -22,6 +22,10 @@ jobs:
         env:
           GITLAB_URL: ${{ secrets.GITLAB_URL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          # 비워두면 oauth2. 일부 자체 호스팅 GitLab 은 사용자명+토큰 조합을 요구함
+          GITLAB_HTTP_USERNAME: ${{ secrets.GITLAB_HTTP_USERNAME }}
+          # 사내 CA 미신뢰 시에만 true (보안상 가능하면 끄는 것이 좋음)
+          GITLAB_SSL_NO_VERIFY: ${{ secrets.GITLAB_SSL_NO_VERIFY }}
         run: |
           set -euo pipefail
 
@@ -29,6 +33,10 @@ jobs:
             echo "Missing GITLAB_URL or GITLAB_TOKEN secrets" >&2
             exit 1
           fi
+
+          # 시크릿 복사 시 줄바꿈/공백이 들어가면 128 이 자주 남
+          GITLAB_URL="$(printf '%s' "${GITLAB_URL}" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+          GITLAB_TOKEN="$(printf '%s' "${GITLAB_TOKEN}" | tr -d '\r\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
           CURRENT="$(git rev-parse --abbrev-ref HEAD)"
           if [ "${CURRENT}" != "main" ]; then
@@ -45,7 +53,15 @@ jobs:
             GITLAB_HOSTPATH="${GITLAB_URL}"
           fi
 
-          REMOTE_URL="https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOSTPATH}"
+          HTTP_USER="${GITLAB_HTTP_USERNAME:-oauth2}"
+          # PAT 에 @ : + / 등이 있으면 URL 이 깨져 128 (auth 실패) — 반드시 인코딩
+          ENC_TOKEN="$(python3 -c "import os, urllib.parse; print(urllib.parse.quote(os.environ['GITLAB_TOKEN'], safe=''))")"
+          REMOTE_URL="https://${HTTP_USER}:${ENC_TOKEN}@${GITLAB_HOSTPATH}"
+
+          if [ "${GITLAB_SSL_NO_VERIFY:-}" = "true" ]; then
+            git config --global http.sslVerify false
+            echo "Warning: GITLAB_SSL_NO_VERIFY=true (TLS 검증 끔)"
+          fi
 
           # 재실행 시 remote 가 이미 있으면 add 가 128 로 실패할 수 있음
           if git remote get-url gitlab >/dev/null 2>&1; then
@@ -54,8 +70,14 @@ jobs:
             git remote add gitlab "${REMOTE_URL}"
           fi
 
+          echo "Remote (token redacted): https://${HTTP_USER}:***@${GITLAB_HOSTPATH}"
+
           # 큰 푸시에서 HTTP 버퍼 이슈가 나는 경우 완화
           git config http.postBuffer 524288000
+          export GIT_TERMINAL_PROMPT=0
+
+          echo "Checking credentials / reachability (ls-remote)..."
+          git ls-remote gitlab HEAD
 
           # main 브랜치만 동기화 (미러/태그 전체 push 아님)
           git push -v --force gitlab main:main
