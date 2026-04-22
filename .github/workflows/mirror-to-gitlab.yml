@@ -16,6 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Push main to GitLab (HTTPS + PAT)
         env:
@@ -26,6 +27,12 @@ jobs:
 
           if [ -z "${GITLAB_URL:-}" ] || [ -z "${GITLAB_TOKEN:-}" ]; then
             echo "Missing GITLAB_URL or GITLAB_TOKEN secrets" >&2
+            exit 1
+          fi
+
+          CURRENT="$(git rev-parse --abbrev-ref HEAD)"
+          if [ "${CURRENT}" != "main" ]; then
+            echo "This workflow only syncs branch 'main', but current branch is '${CURRENT}'." >&2
             exit 1
           fi
 
@@ -40,7 +47,15 @@ jobs:
 
           REMOTE_URL="https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOSTPATH}"
 
-          git remote add gitlab "${REMOTE_URL}"
+          # 재실행 시 remote 가 이미 있으면 add 가 128 로 실패할 수 있음
+          if git remote get-url gitlab >/dev/null 2>&1; then
+            git remote set-url gitlab "${REMOTE_URL}"
+          else
+            git remote add gitlab "${REMOTE_URL}"
+          fi
+
+          # 큰 푸시에서 HTTP 버퍼 이슈가 나는 경우 완화
+          git config http.postBuffer 524288000
 
           # main 브랜치만 동기화 (미러/태그 전체 push 아님)
-          git push --force gitlab HEAD:main
+          git push -v --force gitlab main:main
