@@ -118,7 +118,7 @@ function App() {
       <header className="top-nav">
         <Link to="/" className="brand-link">
           <img src="/image/logo_maekyung.jpg" alt="매일경제 로고" className="brand-logo" />
-          <span className="brand-text">매경 구독 서비스</span>
+          <span className="brand-text">매경 구독서비스</span>
         </Link>
         <nav className="top-nav-links">
           <Link to="/introduction">소개</Link>
