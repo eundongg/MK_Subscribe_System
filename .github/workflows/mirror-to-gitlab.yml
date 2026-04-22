@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   sync:
-    runs-on: [self-hosted, linux, internal-net]
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v5
