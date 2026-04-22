@@ -1,0 +1,46 @@
+name: Sync main to GitLab
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push main to GitLab (HTTPS + PAT)
+        env:
+          GITLAB_URL: ${{ secrets.GITLAB_URL }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${GITLAB_URL:-}" ] || [ -z "${GITLAB_TOKEN:-}" ]; then
+            echo "Missing GITLAB_URL or GITLAB_TOKEN secrets" >&2
+            exit 1
+          fi
+
+          # GITLAB_URL may be "https://host/path.git" or "host/path.git"
+          if [[ "${GITLAB_URL}" == https://* ]]; then
+            GITLAB_HOSTPATH="${GITLAB_URL#https://}"
+          elif [[ "${GITLAB_URL}" == http://* ]]; then
+            GITLAB_HOSTPATH="${GITLAB_URL#http://}"
+          else
+            GITLAB_HOSTPATH="${GITLAB_URL}"
+          fi
+
+          REMOTE_URL="https://oauth2:${GITLAB_TOKEN}@${GITLAB_HOSTPATH}"
+
+          git remote add gitlab "${REMOTE_URL}"
+
+          # main 브랜치만 동기화 (미러/태그 전체 push 아님)
+          git push --force gitlab HEAD:main
