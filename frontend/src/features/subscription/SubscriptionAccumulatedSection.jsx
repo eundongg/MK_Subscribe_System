@@ -95,6 +95,8 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
           stacked: true,
           stackType: "normal",
           toolbar: { show: false },
+          zoom: { enabled: false },
+          selection: { enabled: false },
           fontFamily: '"Noto Sans KR", sans-serif',
           foreColor: "#58585a",
         },
@@ -113,6 +115,21 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
             },
           },
         },
+        states: {
+          normal: {
+            filter: { type: "none", value: 0 },
+          },
+          hover: {
+            filter: { type: "none", value: 0 },
+          },
+          active: {
+            allowMultipleDataPointsSelection: false,
+            filter: { type: "none", value: 0 },
+          },
+        },
+        stroke: {
+          width: 0,
+        },
         colors,
         dataLabels: {
           enabled: true,
@@ -127,6 +144,12 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
         xaxis: {
           categories: [categoryLabel],
           labels: { style: { fontSize: "12px" } },
+          crosshairs: {
+            show: false,
+          },
+          tooltip: {
+            enabled: false,
+          },
         },
         yaxis: {
           labels: {
@@ -144,10 +167,16 @@ export function SubscriptionAccumulatedSection({ currentUser }) {
           position: "bottom",
           fontSize: "12px",
           markers: { width: 10, height: 10, radius: 2 },
+          onItemHover: {
+            highlightDataSeries: false,
+          },
         },
         tooltip: {
           shared: false,
           intersect: true, // 개별 상품 툴팁 표시
+          onDatasetHover: {
+            highlightDataSeries: false,
+          },
           custom({ series, seriesIndex, dataPointIndex, w }) {
             const months = Math.round(Number(series?.[seriesIndex]?.[dataPointIndex]) || 0);
             const allSeries = w?.config?.series ?? [];

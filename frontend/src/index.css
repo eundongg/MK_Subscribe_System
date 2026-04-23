@@ -288,6 +288,28 @@ body {
   display: inline-block;
 }
 
+.subscription-chart-history .apexcharts-series path:focus,
+.subscription-chart-history .apexcharts-series rect:focus,
+.subscription-chart-history .apexcharts-series g:focus {
+  outline: none;
+}
+
+/* RangeBar 클릭 후 첫 데이터에 남는 selected/active 하이라이트 제거 */
+.subscription-chart-history .apexcharts-series .apexcharts-active,
+.subscription-chart-history .apexcharts-series .apexcharts-selected,
+.subscription-chart-history .apexcharts-series .apexcharts-rangebar-area.apexcharts-active,
+.subscription-chart-history .apexcharts-series .apexcharts-rangebar-area.apexcharts-selected {
+  filter: none !important;
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+  outline: none !important;
+}
+
+.subscription-chart-history .apexcharts-series .apexcharts-rangebar-area {
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+}
+
 .subscription-chart-status {
   margin: 12px 0 0;
   padding: 20px;
@@ -1335,6 +1357,48 @@ td {
   font-size: 13px;
   font-weight: 700;
   color: var(--text-dark);
+}
+
+/* stacked 구독 리포트 차트에서도 selected/active 하이라이트 제거 */
+.subscription-chart-stacked .apexcharts-series path:focus,
+.subscription-chart-stacked .apexcharts-series rect:focus,
+.subscription-chart-stacked .apexcharts-series g:focus,
+.subscription-chart-stacked .apexchart-series path:focus,
+.subscription-chart-stacked .apexchart-series rect:focus,
+.subscription-chart-stacked .apexchart-series g:focus,
+.subscription-chart-stacked .apexcharts-series .apexcharts-active,
+.subscription-chart-stacked .apexcharts-series .apexcharts-selected,
+.subscription-chart-stacked .apexcharts-bar-area.apexcharts-active,
+.subscription-chart-stacked .apexcharts-bar-area.apexcharts-selected,
+.subscription-chart-stacked .apexcharts-rangebar-area.apexcharts-active,
+.subscription-chart-stacked .apexcharts-rangebar-area.apexcharts-selected,
+.subscription-chart-stacked .apexchart-series .apexchart-active,
+.subscription-chart-stacked .apexchart-series .apexchart-selected,
+.subscription-chart-stacked .apexchart-bar-area.apexchart-active,
+.subscription-chart-stacked .apexchart-bar-area.apexchart-selected,
+.subscription-chart-stacked .apexchart-rangebar-area.apexchart-active,
+.subscription-chart-stacked .apexchart-rangebar-area.apexchart-selected {
+  outline: none !important;
+  filter: none !important;
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+}
+
+.subscription-chart-stacked .apexcharts-xcrosshairs,
+.subscription-chart-stacked .apexcharts-selection-rect,
+.subscription-chart-stacked .apexchart-xcrosshairs,
+.subscription-chart-stacked .apexchart-selection-rect {
+  display: none !important;
+}
+
+/* stacked bar path 자체 stroke를 항상 제거 (선택 여부와 무관) */
+.subscription-chart-stacked .apexcharts-bar-area,
+.subscription-chart-stacked .apexchart-bar-area,
+.subscription-chart-stacked .apexcharts-series path.apexcharts-bar-area,
+.subscription-chart-stacked .apexchart-series path.apexchart-bar-area {
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+  filter: none !important;
 }
 
 @media (max-width: 720px) {

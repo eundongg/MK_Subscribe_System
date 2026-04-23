@@ -158,6 +158,17 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
             borderRadius: 4,
           },
         },
+        states: {
+          hover: {
+            filter: { type: "none" },
+          },
+          active: {
+            filter: { type: "none" },
+          },
+        },
+        stroke: {
+          width: 0,
+        },
         xaxis: {
           type: "datetime",
           min: xMin,
