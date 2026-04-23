@@ -826,3 +826,459 @@ td {
   }
 }
 
+/* --- 결제 리포트 --- */
+.payment-report-page {
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border);
+  padding: 28px 26px 32px;
+  min-height: 360px;
+}
+
+.payment-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.payment-report-eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.payment-report-header h1 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-dark);
+  letter-spacing: -0.02em;
+}
+
+.payment-report-lead {
+  margin: 0;
+  max-width: 560px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-gray);
+}
+
+.payment-report-link-subtle {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-gray);
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.payment-report-link-subtle:hover {
+  border-color: var(--border);
+  background: #fafafa;
+  color: var(--text-dark);
+}
+
+.payment-report-summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.payment-report-stat {
+  background: linear-gradient(135deg, #fff8f3 0%, #ffffff 55%);
+  border: 1px solid #ffe4d4;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payment-report-stat-muted {
+  background: linear-gradient(135deg, #f7f7f8 0%, #ffffff 60%);
+  border-color: var(--border);
+}
+
+.payment-report-stat-label {
+  font-size: 12px;
+  color: var(--text-gray);
+  font-weight: 600;
+}
+
+.payment-report-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.02em;
+}
+
+.payment-report-stat-value small {
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 2px;
+  color: var(--text-gray);
+}
+
+.payment-report-stat-value-sm {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.payment-report-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee;
+}
+
+.payment-report-toolbar-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.payment-report-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.payment-report-chip {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text-gray);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.payment-report-chip:hover {
+  border-color: #ffc9a8;
+  color: var(--text-dark);
+}
+
+.payment-report-chip.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.payment-report-status {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-gray);
+  font-size: 14px;
+}
+
+.payment-report-status-error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.payment-report-empty {
+  text-align: center;
+  padding: 48px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: #fafafa;
+}
+
+.payment-report-empty p {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.payment-report-empty span {
+  font-size: 13px;
+  color: var(--text-gray);
+}
+
+.payment-report-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.payment-report-card-wrap {
+  position: relative;
+  padding-left: 18px;
+}
+
+.payment-report-card-wrap::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #ffd4bc 0%, #f0f0f0 100%);
+}
+
+.payment-report-card-wrap:last-child::before {
+  bottom: 50%;
+}
+
+.payment-report-card {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.payment-report-card-main {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 140px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 18px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  align-items: flex-start;
+}
+
+.payment-report-card-main:hover {
+  background: #fffaf6;
+}
+
+.payment-report-card-date {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-gray);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.payment-report-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 3px;
+  flex-shrink: 0;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(243, 111, 33, 0.2);
+}
+
+.payment-report-card-body {
+  min-width: 0;
+}
+
+.payment-report-card-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.payment-report-card-product-names {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.35;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  padding-right: 8px;
+}
+
+.payment-report-card-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.payment-report-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.payment-report-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f0f4ff;
+  color: #3d4f9c;
+  border: 1px solid #d6e0ff;
+}
+
+.payment-report-success-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #e8f7ee;
+  color: #1b5e20;
+  border: 1px solid #b8e0c8;
+}
+
+.payment-report-item-count {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-gray);
+}
+
+.payment-report-detail {
+  border-top: 1px solid #f0f0f0;
+  padding: 14px 18px 16px;
+  background: linear-gradient(180deg, #fafafa 0%, #fff 40%);
+}
+
+.payment-report-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.payment-report-detail-status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-gray);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.payment-report-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-report-lines > li {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #eee;
+  background: #fff;
+}
+
+.payment-report-line-simple {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.payment-report-line-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.payment-report-line-months {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff4ec;
+  border: 1px solid #ffd4bc;
+}
+
+.payment-report-guest {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  padding: 24px 12px;
+}
+
+.payment-report-guest-card {
+  width: min(420px, 100%);
+  text-align: center;
+  padding: 32px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fffaf6 0%, #fff 45%);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
+}
+
+.payment-report-guest-card h1 {
+  margin: 0 0 10px;
+  font-size: 22px;
+  color: var(--text-dark);
+}
+
+.payment-report-guest-card p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: var(--text-gray);
+  line-height: 1.55;
+}
+
+.payment-report-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.payment-report-cta:hover {
+  filter: brightness(1.05);
+}
+
+.payment-report-back-home {
+  display: block;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-gray);
+}
+
+@media (max-width: 720px) {
+  .payment-report-summary-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-report-card-main {
+    grid-template-columns: 1fr;
+  }
+}
+

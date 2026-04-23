@@ -14,6 +14,7 @@ import { FailPage } from "./pages/payment/Fail";
 import { SubscriptionAccumulatedSection } from "./features/subscription/SubscriptionAccumulatedSection";
 import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
 import IntroductionPage from "./pages/IntroductionPage";
+import PaymentReportPage from "./pages/report/PaymentReportPage";
 
 function AdminRoute({ currentUser, children }) {
   if (!currentUser) {
@@ -118,11 +119,12 @@ function App() {
       <header className="top-nav">
         <Link to="/" className="brand-link">
           <img src="/image/logo_maekyung.jpg" alt="매일경제 로고" className="brand-logo" />
-          <span className="brand-text">매경 구독서비스</span>
+          <span className="brand-text">매경 구독 서비스</span>
         </Link>
         <nav className="top-nav-links">
           <Link to="/introduction">소개</Link>
           <Link to="/products">상품</Link>
+          {auth.currentUser ? <Link to="/report/payments">결제 리포트</Link> : null}
           {auth.currentUser?.is_admin ? (
             <>
               <Link to="/admin/users">회원</Link>
@@ -144,6 +146,10 @@ function App() {
         <Routes>
           <Route path="/" element={<MainHome currentUser={auth.currentUser} />} />
           <Route path="/introduction" element={<IntroductionPage />} />
+          <Route
+            path="/report/payments"
+            element={<PaymentReportPage currentUser={auth.currentUser} onRequireLogin={auth.openLogin} />}
+          />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route
             path="/products"

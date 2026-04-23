@@ -282,6 +282,70 @@ async function getPaymentItems(req, res) {
   }
 }
 
+/** 본인 결제 목록(결제 리포트). 품목 기준으로 product_name 묶어서 표시용으로 전달. */
+async function getMyPayments(req, res) {
+  const memberNo = req.session.user.member_no;
+  const sql = `
+    SELECT
+      p.payment_no,
+      p.total_price,
+      p.payment_date,
+      pm.method_name,
+      GROUP_CONCAT(DISTINCT pr.product_name ORDER BY pr.product_name ASC SEPARATOR ', ') AS product_names
+    FROM payment p
+    INNER JOIN payment_method pm ON p.method_id = pm.method_id
+    LEFT JOIN payment_items pi ON pi.payment_no = p.payment_no
+    LEFT JOIN product pr ON pr.product_no = pi.product_no
+    WHERE p.member_no = ?
+    GROUP BY p.payment_no, p.total_price, p.payment_date, pm.method_id, pm.method_name
+    ORDER BY p.payment_date DESC, p.payment_no DESC
+  `;
+
+  try {
+    const rows = await query(sql, [memberNo]);
+    res.json(rows);
+  } catch (err) {
+    console.error('내 결제 조회 에러:', err);
+    res.status(500).json({ message: '결제 내역을 불러오지 못했습니다.' });
+  }
+}
+
+/** 본인 결제 건의 품목만 조회(타인 결제번호 접근 차단). */
+async function getMyPaymentItems(req, res) {
+  const paymentId = req.params.id;
+  const memberNo = req.session.user.member_no;
+
+  try {
+    const own = await query(
+      'SELECT payment_no FROM payment WHERE payment_no = ? AND member_no = ? LIMIT 1',
+      [paymentId, memberNo]
+    );
+    if (own.length === 0) {
+      res.status(404).json({ message: '결제 내역을 찾을 수 없습니다.' });
+      return;
+    }
+
+    const sql = `
+      SELECT
+        pi.payment_no,
+        pi.product_no,
+        pi.start_date,
+        pi.end_date,
+        pr.product_name,
+        pr.duration_months AS product_duration_months
+      FROM payment_items pi
+      JOIN product pr ON pi.product_no = pr.product_no
+      WHERE pi.payment_no = ?
+      ORDER BY pi.start_date ASC, pi.product_no ASC
+    `;
+    const items = await query(sql, [paymentId]);
+    res.json(items);
+  } catch (err) {
+    console.error('내 결제 상세 조회 에러:', err.sqlMessage || err.message || err);
+    res.status(500).json({ message: '상세 결제 조회 실패' });
+  }
+}
+
 /** 상품별 구매 구독 플랜 개월(duration_months) 합계. 본인만 조회. */
 async function getMySubscriptionAccumulated(req, res) {
   const memberNo = req.session.user.member_no;
@@ -365,6 +429,8 @@ app.get('/api/auth/me', me);
 app.get('/api/auth/check-login-id', checkLoginId);
 app.get('/api/me/subscription-accumulated', requireAuth, getMySubscriptionAccumulated);
 app.get('/api/me/subscription-current-days', requireAuth, getMyCurrentSubscriptionDays);
+app.get('/api/me/payments', requireAuth, getMyPayments);
+app.get('/api/me/payments/:id/items', requireAuth, getMyPaymentItems);
 
 // Admin API (권장)
 app.use('/api/admin', requireAdmin);
