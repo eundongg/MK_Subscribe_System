@@ -228,6 +228,9 @@ export default function PaymentReportPage({ currentUser }) {
       0,
       Math.ceil((target.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     );
+    if (diffDays > 14) {
+      return null;
+    }
     return {
       ...target,
       dDay: diffDays,
