@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { SubscriptionHistoryRangeSection } from "../../features/subscription/SubscriptionHistoryRangeSection";
 
 const PERIODS = [
   { id: "all", label: "전체" },
@@ -213,6 +214,8 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
           ← 홈
         </Link>
       </header>
+
+      <SubscriptionHistoryRangeSection currentUser={currentUser} />
 
       <div className="payment-report-summary-row">
         <article className="payment-report-stat">

@@ -184,6 +184,7 @@ body {
   margin-top: 65px;
   border-top: 1px solid #f0f0f0;
   padding-top: 18px;
+  margin-bottom: 75px;
 }
 
 .main-report-caption {
@@ -259,6 +260,32 @@ body {
 
 .subscription-chart-wrap .apexcharts-canvas {
   margin: 0 auto;
+}
+
+.subscription-history-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-top: 8px;
+}
+
+.subscription-history-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-gray);
+  background: #f7f7f8;
+  border: 1px solid #ececee;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.subscription-history-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
 }
 
 .subscription-chart-status {

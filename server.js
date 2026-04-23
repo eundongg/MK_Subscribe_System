@@ -371,6 +371,34 @@ async function getMySubscriptionAccumulated(req, res) {
   }
 }
 
+/** 내 구독 이력 타임라인(상품별 시작~종료 기간). */
+async function getMySubscriptionHistory(req, res) {
+  const memberNo = req.session.user.member_no;
+  const sql = `
+    SELECT
+      pi.payment_no,
+      pi.product_no,
+      pr.product_name,
+      pi.start_date,
+      pi.end_date,
+      pi.status
+    FROM payment_items pi
+    INNER JOIN product pr ON pr.product_no = pi.product_no
+    WHERE pi.member_no = ?
+      AND pi.start_date IS NOT NULL
+      AND pi.end_date IS NOT NULL
+    ORDER BY pi.start_date ASC, pi.end_date ASC, pi.payment_no ASC
+  `;
+
+  try {
+    const rows = await query(sql, [memberNo]);
+    res.json(rows);
+  } catch (err) {
+    console.error('내 구독 이력 조회 에러:', err.sqlMessage || err.message || err);
+    res.status(500).json({ message: '구독 이력을 불러오지 못했습니다.' });
+  }
+}
+
 /** 현재 진행 중(ING) 구독 기준, 가장 오래된 시작일로부터 경과 일수(첫날=1일). */
 async function getMyCurrentSubscriptionDays(req, res) {
   const memberNo = req.session.user.member_no;
@@ -428,6 +456,7 @@ app.post('/api/auth/logout', logout);
 app.get('/api/auth/me', me);
 app.get('/api/auth/check-login-id', checkLoginId);
 app.get('/api/me/subscription-accumulated', requireAuth, getMySubscriptionAccumulated);
+app.get('/api/me/subscription-history', requireAuth, getMySubscriptionHistory);
 app.get('/api/me/subscription-current-days', requireAuth, getMyCurrentSubscriptionDays);
 app.get('/api/me/payments', requireAuth, getMyPayments);
 app.get('/api/me/payments/:id/items', requireAuth, getMyPaymentItems);
