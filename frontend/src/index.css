@@ -1299,6 +1299,44 @@ td {
   color: var(--text-gray);
 }
 
+.renew-bubble {
+  width: 100%;
+  border: 1px solid #ffd8bf;
+  background: #fff7f2;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.renew-bubble:hover {
+  background: #fff1e8;
+}
+
+.renew-bubble-image {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.renew-bubble-balloon {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #ffd8bf;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
 @media (max-width: 720px) {
   .payment-report-summary-row {
     grid-template-columns: 1fr;

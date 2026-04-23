@@ -148,7 +148,7 @@ function App() {
           <Route path="/introduction" element={<IntroductionPage />} />
           <Route
             path="/report/payments"
-            element={<PaymentReportPage currentUser={auth.currentUser} onRequireLogin={auth.openLogin} />}
+            element={<PaymentReportPage currentUser={auth.currentUser} />}
           />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route

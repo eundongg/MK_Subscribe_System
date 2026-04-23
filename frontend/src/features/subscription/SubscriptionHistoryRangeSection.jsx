@@ -15,6 +15,7 @@ const PRODUCT_COLORS = [
   "#0d9488",
   "#7c3aed",
 ];
+const PRODUCT_ORDER = ["매경e신문", "매경이코노미", "매경럭스멘"];
 const PRODUCT_FIXED_COLORS = {
   "매경e신문": "#f36f21", // 주황
   "매경럭스멘": "#16a34a", // 초록
@@ -26,6 +27,17 @@ function statusText(status) {
   }
   const map = { ING: "이용 중", EXPIRED: "만료", END: "종료", CANCEL: "취소" };
   return map[status] || status;
+}
+
+function quarterStartTs(ts) {
+  const d = new Date(ts);
+  const qMonth = Math.floor(d.getMonth() / 3) * 3;
+  return new Date(d.getFullYear(), qMonth, 1).getTime();
+}
+
+function addMonthsTs(ts, months) {
+  const d = new Date(ts);
+  return new Date(d.getFullYear(), d.getMonth() + months, 1).getTime();
 }
 
 /**
@@ -81,9 +93,15 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
       return null;
     }
 
-    const productNames = [...new Set(rows.map((r) => r.product_name).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b, "ko-KR")
-    );
+    const orderMap = new Map(PRODUCT_ORDER.map((name, idx) => [name, idx]));
+    const productNames = [...new Set(rows.map((r) => r.product_name).filter(Boolean))].sort((a, b) => {
+      const ai = orderMap.has(a) ? orderMap.get(a) : Number.MAX_SAFE_INTEGER;
+      const bi = orderMap.has(b) ? orderMap.get(b) : Number.MAX_SAFE_INTEGER;
+      if (ai !== bi) {
+        return ai - bi;
+      }
+      return a.localeCompare(b, "ko-KR");
+    });
     const colorByProduct = {};
     productNames.forEach((name, idx) => {
       colorByProduct[name] = PRODUCT_FIXED_COLORS[name] || PRODUCT_COLORS[idx % PRODUCT_COLORS.length];
@@ -111,6 +129,15 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
     const todayTs = Date.now();
     const todayLabel = new Date(todayTs).toLocaleDateString("ko-KR");
 
+    const minStart = Math.min(...data.map((p) => p.y[0]));
+    const maxEnd = Math.max(...data.map((p) => p.y[1]));
+    const xMin = quarterStartTs(minStart);
+    const xMax = addMonthsTs(quarterStartTs(maxEnd), 3);
+    const monthsSpan =
+      (new Date(xMax).getFullYear() - new Date(xMin).getFullYear()) * 12 +
+      (new Date(xMax).getMonth() - new Date(xMin).getMonth());
+    const tickAmount = Math.max(2, Math.floor(monthsSpan / 3) + 1);
+
     return {
       legendRows: productNames.map((name) => ({ name, color: colorByProduct[name] })),
       series: [{ name: "구독 기간", data }],
@@ -120,6 +147,8 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
           toolbar: { show: false },
           fontFamily: '"Noto Sans KR", sans-serif',
           foreColor: "#58585a",
+          zoom: {enabled: false},
+          selection: {enabled: false},
         },
         plotOptions: {
           bar: {
@@ -131,7 +160,14 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
         },
         xaxis: {
           type: "datetime",
-          labels: { datetimeUTC: false, style: { fontSize: "12px" } },
+          min: xMin,
+          max: xMax,
+          tickAmount,
+          labels: {
+            datetimeUTC: false,
+            style: { fontSize: "12px" },
+            format: "yyyy년 M월",
+          },
         },
         annotations: {
           xaxis: [
@@ -140,7 +176,7 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
               borderColor: "#ef4444",
               strokeDashArray: 6,
               label: {
-                text: `오늘 (${todayLabel})`,
+                text: `today`,
                 style: {
                   color: "#fff",
                   background: "#ef4444",

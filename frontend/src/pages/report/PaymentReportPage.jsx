@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { SubscriptionHistoryRangeSection } from "../../features/subscription/SubscriptionHistoryRangeSection";
 
 const PERIODS = [
@@ -76,14 +77,18 @@ function productCountLabel(payment, items) {
   return `상품 ${count}개`;
 }
 
-export default function PaymentReportPage({ currentUser, onRequireLogin }) {
+export default function PaymentReportPage({ currentUser }) {
+  const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [period, setPeriod] = useState("90d");
+  const [period, setPeriod] = useState("all");
   const [expandedNo, setExpandedNo] = useState(null);
   const [itemsByPayment, setItemsByPayment] = useState({});
   const [itemsLoadingNo, setItemsLoadingNo] = useState(null);
+  const [historyRows, setHistoryRows] = useState([]);
+  const [productsByNo, setProductsByNo] = useState({});
+  const [selectedRenewProduct, setSelectedRenewProduct] = useState(null);
 
   useEffect(() => {
     if (!currentUser) {
@@ -127,6 +132,63 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
     };
   }, [currentUser?.member_no]);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setHistoryRows([]);
+      return undefined;
+    }
+    let cancelled = false;
+    fetch("/api/me/subscription-history", { credentials: "include" })
+      .then(async (res) => {
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(data?.message || "구독 이력을 불러오지 못했습니다.");
+        }
+        return Array.isArray(data) ? data : [];
+      })
+      .then((rows) => {
+        if (!cancelled) {
+          setHistoryRows(rows);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHistoryRows([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.member_no]);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setProductsByNo({});
+      return undefined;
+    }
+    let cancelled = false;
+    fetch("/api/store/products")
+      .then((res) => res.json())
+      .then((products) => {
+        if (cancelled) {
+          return;
+        }
+        const map = {};
+        (Array.isArray(products) ? products : []).forEach((p) => {
+          map[p.product_no] = p;
+        });
+        setProductsByNo(map);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProductsByNo({});
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.member_no]);
+
   const filtered = useMemo(() => filterByPeriod(payments, period), [payments, period]);
 
   const summary = useMemo(() => {
@@ -144,6 +206,34 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
     });
     return { count, total, lastDate };
   }, [filtered]);
+
+  const renewTarget = useMemo(() => {
+    if (!Array.isArray(historyRows) || historyRows.length === 0) {
+      return null;
+    }
+    const now = new Date();
+    const candidates = historyRows
+      .filter((row) => String(row.status || "").toUpperCase() === "ING" && row.end_date)
+      .map((row) => {
+        const end = new Date(row.end_date);
+        return { ...row, endDate: end };
+      })
+      .filter((row) => !Number.isNaN(row.endDate.getTime()) && row.endDate >= now);
+    if (candidates.length === 0) {
+      return null;
+    }
+    candidates.sort((a, b) => a.endDate - b.endDate);
+    const target = candidates[0];
+    const diffDays = Math.max(
+      0,
+      Math.ceil((target.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    );
+    return {
+      ...target,
+      dDay: diffDays,
+      displayProduct: productsByNo[target.product_no] || null,
+    };
+  }, [historyRows, productsByNo]);
 
   const loadItems = useCallback(
     (paymentNo) => {
@@ -187,10 +277,7 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
         <div className="payment-report-guest">
           <div className="payment-report-guest-card">
             <h1>결제 리포트</h1>
-            <p>로그인하면 내 결제 내역을 기간별로 정리해 볼 수 있습니다.</p>
-            <button type="button" className="payment-report-cta" onClick={onRequireLogin}>
-              로그인
-            </button>
+            <p>결제 리포트는 로그인 후 확인할 수 있습니다. 상단 메뉴에서 로그인해 주세요.</p>
             <Link to="/" className="payment-report-back-home">
               홈으로
             </Link>
@@ -210,10 +297,22 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
             결제일·금액·수단을 한눈에 보고, 각 건마다 구매한 상품 내역을 펼쳐 확인할 수 있습니다.
           </p>
         </div>
-        <Link to="/" className="payment-report-link-subtle">
-          ← 홈
-        </Link>
       </header>
+
+      {renewTarget ? (
+        <button
+          type="button"
+          className="renew-bubble"
+          onClick={() => setSelectedRenewProduct(renewTarget.displayProduct || renewTarget)}
+        >
+          <img src="/image/지붕이.png" alt="지붕이 캐릭터" className="renew-bubble-image" />
+          <span className="renew-bubble-balloon">
+            {renewTarget.dDay <= 7
+              ? `${renewTarget.product_name} 곧 끝나요! (D-${renewTarget.dDay})`
+              : `${renewTarget.product_name} 계속 구독할까요?`}
+          </span>
+        </button>
+      ) : null}
 
       <SubscriptionHistoryRangeSection currentUser={currentUser} />
 
@@ -338,6 +437,39 @@ export default function PaymentReportPage({ currentUser, onRequireLogin }) {
           })}
         </ul>
       )}
+
+      {selectedRenewProduct ? (
+        <div className="modal-backdrop" onClick={() => setSelectedRenewProduct(null)}>
+          <section className="confirm-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>이 상품을 구독할까요?</h2>
+            <p className="confirm-product-name">{selectedRenewProduct.product_name}</p>
+            <p className="confirm-product-price">
+              {Number(selectedRenewProduct.price || 0).toLocaleString()}원 /{" "}
+              {selectedRenewProduct.duration_months || "-"}개월
+            </p>
+            <p className="confirm-help-text">확인하면 결제 내역 화면으로 이동합니다.</p>
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setSelectedRenewProduct(null)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="btn-modal-confirm"
+                onClick={() => {
+                  setSelectedRenewProduct(null);
+                  navigate("/checkout");
+                }}
+              >
+                구독 진행
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }
