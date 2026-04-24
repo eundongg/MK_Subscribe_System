@@ -6,7 +6,7 @@ import { PRODUCT_IMAGE_MAP } from "../../constants/productImageMap";
 function ProductsPage({ currentUser, onRequireLogin }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [subscribeTarget, setSubscribeTarget] = useState(null);
 
   useEffect(() => {
@@ -28,7 +28,52 @@ function ProductsPage({ currentUser, onRequireLogin }) {
   };
 
   const handleSelectProduct = (product) => {
-    setSelectedProduct(product);
+    setSelectedProducts((prev) => {
+      const exists = prev.some((item) => item.product_no === product.product_no);
+      if (exists) {
+        return prev.filter((item) => item.product_no !== product.product_no);
+      }
+      if (prev.length >= 2) {
+        return prev;
+      }
+      return [...prev, product];
+    });
+  };
+
+  const selectedCount = selectedProducts.length;
+  const firstSelected = selectedProducts[0] || null;
+  const secondSelected = selectedProducts[1] || null;
+  const isBundleSelected = selectedCount === 2;
+  const originalBundlePrice = selectedProducts.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const discountedBundlePrice = Math.floor(originalBundlePrice * 0.95);
+  const subscribeProduct =
+    selectedCount === 1
+      ? firstSelected
+      : selectedCount === 2
+        ? {
+            product_name: `${firstSelected.product_name} + ${secondSelected.product_name} 묶음`,
+            price: discountedBundlePrice,
+            duration_months: "묶음 상품",
+          }
+        : null;
+  const subscribeDurationText =
+    subscribeTarget?.duration_months === "묶음 상품"
+      ? "묶음 상품"
+      : `${subscribeTarget?.duration_months || "-"}개월`;
+  const handleBundleLightMove = (event) => {
+    const card = event.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    card.style.setProperty("--bundle-light-x", `${(x / rect.width) * 100}%`);
+    card.style.setProperty("--bundle-light-y", `${(y / rect.height) * 100}%`);
+    card.style.setProperty("--bundle-light-opacity", "0.9");
+  };
+  const handleBundleLightLeave = (event) => {
+    const card = event.currentTarget;
+    card.style.setProperty("--bundle-light-opacity", "0");
+    card.style.setProperty("--bundle-light-x", "100%");
+    card.style.setProperty("--bundle-light-y", "0%");
   };
 
   return (
@@ -40,16 +85,21 @@ function ProductsPage({ currentUser, onRequireLogin }) {
         </header>
         <section className="storefront-split">
           <section className="product-list-pane">
-            <p className="product-list-guide">왼쪽 목록에서 상품을 선택해 상세 정보를 확인하세요.</p>
+            <p className="product-list-guide">
+              왼쪽 목록에서 상품을 선택해 상세 정보를 확인하세요. (최대 2개 선택 가능)
+            </p>
             <section className="product-grid">
               {products.map((product) => {
-                const isActive = selectedProduct?.product_no === product.product_no;
+                const isActive = selectedProducts.some(
+                  (selectedItem) => selectedItem.product_no === product.product_no
+                );
                 return (
                   <ProductCardTilt
                     key={product.product_no}
                     className={`product-card${isActive ? " is-active" : ""}`}
                     role="button"
                     tabIndex={0}
+                    aria-pressed={isActive}
                     onClick={() => handleSelectProduct(product)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -80,37 +130,86 @@ function ProductsPage({ currentUser, onRequireLogin }) {
           </section>
 
           <section className="product-detail-pane">
-            {selectedProduct ? (
+            {selectedCount === 1 ? (
               <article className="product-detail-card">
                 <img
                   className="product-detail-thumb"
-                  src={PRODUCT_IMAGE_MAP[selectedProduct.product_name] || "/image/매경e신문.png"}
-                  alt={selectedProduct.product_name}
+                  src={PRODUCT_IMAGE_MAP[firstSelected.product_name] || "/image/매경e신문.png"}
+                  alt={firstSelected.product_name}
                 />
                 <div className="product-detail-body">
                   <p className="product-detail-eyebrow">선택된 상품</p>
-                  <h2 className="product-detail-name">{selectedProduct.product_name}</h2>
+                  <h2 className="product-detail-name">{firstSelected.product_name}</h2>
                   <p className="product-detail-desc">
-                    {selectedProduct.description || "상품 설명이 아직 등록되지 않았습니다."}
+                    {firstSelected.description || "상품 설명이 아직 등록되지 않았습니다."}
                   </p>
                   <div className="product-detail-meta">
                     <div>
                       <p className="product-detail-meta-label">가격</p>
                       <p className="product-detail-meta-value">
-                        {Number(selectedProduct.price || 0).toLocaleString()}원
+                        {Number(firstSelected.price || 0).toLocaleString()}원
                       </p>
                     </div>
                     <div>
                       <p className="product-detail-meta-label">이용 기간</p>
-                      <p className="product-detail-meta-value">{selectedProduct.duration_months || "-"}개월</p>
+                      <p className="product-detail-meta-value">{firstSelected.duration_months || "-"}개월</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     className="btn-subscribe product-detail-subscribe"
-                    onClick={() => handleOpenSubscribeModal(selectedProduct)}
+                    onClick={() => handleOpenSubscribeModal(firstSelected)}
                   >
                     이 상품 구독하기
+                  </button>
+                </div>
+              </article>
+            ) : isBundleSelected ? (
+              <article
+                className="product-detail-card product-detail-card-bundle"
+                onMouseMove={handleBundleLightMove}
+                onMouseLeave={handleBundleLightLeave}
+              >
+                <div className="bundle-thumb-stack">
+                  <img
+                    className="product-detail-thumb product-detail-thumb-split"
+                    src={PRODUCT_IMAGE_MAP[firstSelected.product_name] || "/image/매경e신문.png"}
+                    alt={firstSelected.product_name}
+                  />
+                  <img
+                    className="product-detail-thumb product-detail-thumb-split"
+                    src={PRODUCT_IMAGE_MAP[secondSelected.product_name] || "/image/매경e신문.png"}
+                    alt={secondSelected.product_name}
+                  />
+                </div>
+                <div className="product-detail-body">
+                  <p className="product-detail-eyebrow">2개 선택 번들</p>
+                  <h2 className="product-detail-name">
+                    {firstSelected.product_name} + {secondSelected.product_name}
+                  </h2>
+                  <p className="product-detail-desc">
+                    두 상품을 함께 구독하는 조합입니다. 번들 적용 시 결제 금액이 5% 할인됩니다.
+                  </p>
+                  <div className="product-detail-meta">
+                    <div>
+                      <p className="product-detail-meta-label">정가 합계</p>
+                      <p className="product-detail-meta-value bundle-price-original">
+                        {originalBundlePrice.toLocaleString()}원
+                      </p>
+                    </div>
+                    <div>
+                      <p className="product-detail-meta-label">5% 할인 가격</p>
+                      <p className="product-detail-meta-value bundle-price-discount">
+                        {discountedBundlePrice.toLocaleString()}원
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-subscribe product-detail-subscribe"
+                    onClick={() => handleOpenSubscribeModal(subscribeProduct)}
+                  >
+                    번들로 구독하기
                   </button>
                 </div>
               </article>
@@ -130,8 +229,7 @@ function ProductsPage({ currentUser, onRequireLogin }) {
             <h2>이 상품을 구독할까요?</h2>
             <p className="confirm-product-name">{subscribeTarget.product_name}</p>
             <p className="confirm-product-price">
-              {Number(subscribeTarget.price || 0).toLocaleString()}원 /{" "}
-              {subscribeTarget.duration_months || "-"}개월
+              {Number(subscribeTarget.price || 0).toLocaleString()}원 / {subscribeDurationText}
             </p>
             <p className="confirm-help-text">확인하면 결제 내역 화면으로 이동합니다.</p>
             <div className="confirm-actions">
