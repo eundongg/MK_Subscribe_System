@@ -15,10 +15,10 @@ const PRODUCT_COLORS = [
   "#0d9488",
   "#7c3aed",
 ];
-const PRODUCT_ORDER = ["매경e신문", "매경이코노미", "매경럭스멘"];
+const PRODUCT_ORDER = ["매경e신문", "매경이코노미", "매경럭스맨"];
 const PRODUCT_FIXED_COLORS = {
   "매경e신문": "#f36f21", // 주황
-  "매경럭스멘": "#16a34a", // 초록
+  "매경럭스맨": "#16a34a", // 초록
 };
 
 function statusText(status) {
