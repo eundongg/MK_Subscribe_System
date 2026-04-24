@@ -648,11 +648,13 @@ td {
   overflow: hidden;
   background: var(--white);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transform: perspective(720px) rotateX(0deg) rotateY(0deg);
+  transform-style: preserve-3d;
+  transition: transform 0.1s ease-out, box-shadow 0.22s ease;
+  will-change: transform;
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
 

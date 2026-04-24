@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ProductCardTilt from "../../components/ProductCardTilt";
 import { PRODUCT_IMAGE_MAP } from "../../constants/productImageMap";
 
 function ProductsPage({ currentUser, onRequireLogin }) {
@@ -34,7 +35,7 @@ function ProductsPage({ currentUser, onRequireLogin }) {
         </header>
         <section className="product-grid">
           {products.map((product) => (
-            <article className="product-card" key={product.product_no}>
+            <ProductCardTilt key={product.product_no} className="product-card">
               <img
                 className="product-thumb"
                 src={PRODUCT_IMAGE_MAP[product.product_name] || "/image/매경e신문.png"}
@@ -57,7 +58,7 @@ function ProductsPage({ currentUser, onRequireLogin }) {
                   구독하기
                 </button>
               </div>
-            </article>
+            </ProductCardTilt>
           ))}
         </section>
       </section>
