@@ -7,7 +7,7 @@ const MAX_DEG = 6;
  * article 전체(테두리·그림자 포함)가 마우스에 맞춰 살짝 기울어짐.
  * 터치(coarse pointer)에서는 동작하지 않음.
  */
-export default function ProductCardTilt({ children, className = "" }) {
+export default function ProductCardTilt({ children, className = "", ...rest }) {
   const articleRef = useRef(null);
 
   const onMove = useCallback((e) => {
@@ -33,7 +33,13 @@ export default function ProductCardTilt({ children, className = "" }) {
   }, []);
 
   return (
-    <article ref={articleRef} className={className} onMouseMove={onMove} onMouseLeave={onLeave}>
+    <article
+      ref={articleRef}
+      className={className}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
+      {...rest}
+    >
       {children}
     </article>
   );
