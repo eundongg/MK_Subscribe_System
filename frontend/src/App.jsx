@@ -196,6 +196,8 @@ function App() {
         loginForm={auth.loginForm}
         idCheck={auth.idCheck}
         passwordMatches={auth.passwordMatches}
+        passwordRuleMessage={auth.passwordRuleMessage}
+        passwordRuleSatisfied={auth.passwordRuleSatisfied}
         canProceedSignup={auth.canProceedSignup}
         canProceedLogin={auth.canProceedLogin}
         passwordMinLength={auth.passwordMinLength}

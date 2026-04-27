@@ -81,6 +81,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function getUserStatusEnumValues() {
+  const rows = await query("SHOW COLUMNS FROM user LIKE 'status'");
+  const type = rows?.[0]?.Type || "";
+  const matches = [...String(type).matchAll(/'([^']+)'/g)];
+  return matches.map((m) => m[1].toUpperCase());
+}
+
 async function signup(req, res) {
   const { loginId, password, name } = req.body ?? {};
 
@@ -221,12 +228,192 @@ async function checkLoginId(req, res) {
 }
 
 async function getUsers(_req, res) {
+  const sql = `
+    SELECT
+      u.member_no,
+      u.name,
+      u.login_id,
+      u.status,
+      u.is_admin,
+      u.created_at,
+      COALESCE(pay.payment_count, 0) AS payment_count,
+      COALESCE(pay.total_paid, 0) AS total_paid,
+      pay.last_payment_date,
+      COALESCE(sub.active_subscription_count, 0) AS active_subscription_count
+    FROM user u
+    LEFT JOIN (
+      SELECT
+        member_no,
+        COUNT(*) AS payment_count,
+        SUM(total_price) AS total_paid,
+        MAX(payment_date) AS last_payment_date
+      FROM payment
+      GROUP BY member_no
+    ) pay ON pay.member_no = u.member_no
+    LEFT JOIN (
+      SELECT
+        p.member_no,
+        COUNT(*) AS active_subscription_count
+      FROM payment_items pi
+      INNER JOIN payment p ON p.payment_no = pi.payment_no
+      WHERE pi.status = 'ING'
+        AND (pi.end_date IS NULL OR pi.end_date >= CURDATE())
+      GROUP BY p.member_no
+    ) sub ON sub.member_no = u.member_no
+    ORDER BY u.member_no DESC
+  `;
   try {
-    const users = await query('SELECT * FROM user');
+    const users = await query(sql);
     res.json(users);
   } catch (err) {
     console.error('회원 조회 에러:', err);
     res.status(500).json({ message: '회원 조회 실패' });
+  }
+}
+
+async function getUserDetail(req, res) {
+  const memberNo = Number(req.params.memberNo);
+  if (!Number.isFinite(memberNo) || memberNo <= 0) {
+    res.status(400).json({ message: '유효하지 않은 회원 번호입니다.' });
+    return;
+  }
+
+  const userSql = `
+    SELECT
+      u.member_no,
+      u.name,
+      u.login_id,
+      u.status,
+      u.is_admin,
+      u.created_at,
+      COALESCE(pay.payment_count, 0) AS payment_count,
+      COALESCE(pay.total_paid, 0) AS total_paid,
+      pay.last_payment_date,
+      COALESCE(sub.active_subscription_count, 0) AS active_subscription_count,
+      sub.next_expiry_date
+    FROM user u
+    LEFT JOIN (
+      SELECT
+        member_no,
+        COUNT(*) AS payment_count,
+        SUM(total_price) AS total_paid,
+        MAX(payment_date) AS last_payment_date
+      FROM payment
+      GROUP BY member_no
+    ) pay ON pay.member_no = u.member_no
+    LEFT JOIN (
+      SELECT
+        p.member_no,
+        COUNT(*) AS active_subscription_count,
+        MIN(pi.end_date) AS next_expiry_date
+      FROM payment_items pi
+      INNER JOIN payment p ON p.payment_no = pi.payment_no
+      WHERE pi.status = 'ING'
+        AND (pi.end_date IS NULL OR pi.end_date >= CURDATE())
+      GROUP BY p.member_no
+    ) sub ON sub.member_no = u.member_no
+    WHERE u.member_no = ?
+    LIMIT 1
+  `;
+
+  const productSummarySql = `
+    SELECT
+      pr.product_name,
+      COUNT(*) AS active_count
+    FROM payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    INNER JOIN product pr ON pr.product_no = pi.product_no
+    WHERE p.member_no = ?
+      AND pi.status = 'ING'
+      AND (pi.end_date IS NULL OR pi.end_date >= CURDATE())
+    GROUP BY pr.product_name
+    ORDER BY active_count DESC, pr.product_name ASC
+  `;
+
+  try {
+    const rows = await query(userSql, [memberNo]);
+    if (rows.length === 0) {
+      res.status(404).json({ message: '회원을 찾을 수 없습니다.' });
+      return;
+    }
+    const activeProducts = await query(productSummarySql, [memberNo]);
+    res.json({
+      user: rows[0],
+      activeProducts: Array.isArray(activeProducts) ? activeProducts : [],
+    });
+  } catch (err) {
+    console.error('회원 상세 조회 에러:', err);
+    res.status(500).json({ message: '회원 상세 조회 실패' });
+  }
+}
+
+async function updateUserAdminSettings(req, res) {
+  const memberNo = Number(req.params.memberNo);
+  const { status, is_admin: isAdmin } = req.body ?? {};
+
+  if (!Number.isFinite(memberNo) || memberNo <= 0) {
+    res.status(400).json({ message: '유효하지 않은 회원 번호입니다.' });
+    return;
+  }
+
+  const statusMap = {
+    ACTIVE: 'ACTIVE',
+    DORMANT: 'DORMANT',
+    SUSPENDED: 'SUSPENDED',
+    SLEEP: 'DORMANT',
+    DELETED: 'SUSPENDED',
+  };
+  const requestedStatus = statusMap[String(status || '').toUpperCase()];
+  if (!requestedStatus) {
+    res.status(400).json({ message: '상태 값이 올바르지 않습니다.' });
+    return;
+  }
+  if (typeof isAdmin !== 'boolean') {
+    res.status(400).json({ message: '관리자 권한 값이 올바르지 않습니다.' });
+    return;
+  }
+  if (req.session.user?.member_no === memberNo && !isAdmin) {
+    res.status(400).json({ message: '본인 관리자 권한은 해제할 수 없습니다.' });
+    return;
+  }
+
+  try {
+    const allowedStatuses = await getUserStatusEnumValues();
+    let dbStatus = requestedStatus;
+    if (requestedStatus === 'DORMANT' && !allowedStatuses.includes('DORMANT')) {
+      if (allowedStatuses.includes('SLEEP')) dbStatus = 'SLEEP';
+      else if (allowedStatuses.includes('INACTIVE')) dbStatus = 'INACTIVE';
+    }
+    if (requestedStatus === 'SUSPENDED' && !allowedStatuses.includes('SUSPENDED')) {
+      if (allowedStatuses.includes('DELETED')) dbStatus = 'DELETED';
+    }
+    if (!allowedStatuses.includes(dbStatus)) {
+      res.status(400).json({
+        message: `상태 값이 DB와 맞지 않습니다. 허용값: ${allowedStatuses.join(', ')}`,
+      });
+      return;
+    }
+
+    const result = await query(
+      `
+      UPDATE user
+      SET status = ?, is_admin = ?, updated_at = NOW()
+      WHERE member_no = ?
+      `,
+      [dbStatus, isAdmin ? 1 : 0, memberNo]
+    );
+    if (!result.affectedRows) {
+      res.status(404).json({ message: '회원을 찾을 수 없습니다.' });
+      return;
+    }
+    const rows = await query(
+      'SELECT member_no, name, login_id, status, is_admin, created_at FROM user WHERE member_no = ? LIMIT 1',
+      [memberNo]
+    );
+    res.json({ user: rows[0] || null });
+  } catch (err) {
+    console.error('회원 상태/권한 수정 에러:', err);
+    res.status(500).json({ message: '회원 상태/권한 수정 실패' });
   }
 }
 
@@ -464,6 +651,8 @@ app.get('/api/me/payments/:id/items', requireAuth, getMyPaymentItems);
 // Admin API (권장)
 app.use('/api/admin', requireAdmin);
 app.get('/api/admin/users', getUsers);
+app.get('/api/admin/users/:memberNo', getUserDetail);
+app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
 app.get('/api/admin/products', getProducts);
 app.get('/api/admin/payments', getPayments);
 app.get('/api/admin/payments/:id/items', getPaymentItems);

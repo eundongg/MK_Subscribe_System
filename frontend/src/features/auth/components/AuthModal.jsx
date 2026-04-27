@@ -5,6 +5,8 @@ export function AuthModal({
   loginForm,
   idCheck,
   passwordMatches,
+  passwordRuleMessage,
+  passwordRuleSatisfied,
   canProceedSignup,
   canProceedLogin,
   passwordMinLength,
@@ -73,10 +75,12 @@ export function AuthModal({
                   onChange={(event) => onChangeSignupField("passwordConfirm", event.target.value)}
                   placeholder="비밀번호를 다시 입력하세요"
                 />
-                {signupForm.passwordConfirm.length > 0 && !passwordMatches ? (
+                {passwordRuleMessage ? <p className="field-error">{passwordRuleMessage}</p> : null}
+                {passwordRuleSatisfied ? <p className="field-success">사용 가능한 비밀번호 형식입니다.</p> : null}
+                {passwordRuleSatisfied && signupForm.passwordConfirm.length > 0 && !passwordMatches ? (
                   <p className="field-error">비밀번호가 일치하지 않습니다.</p>
                 ) : null}
-                {signupForm.passwordConfirm.length > 0 && passwordMatches ? (
+                {passwordRuleSatisfied && signupForm.passwordConfirm.length > 0 && passwordMatches ? (
                   <p className="field-success">비밀번호가 일치합니다.</p>
                 ) : null}
               </label>

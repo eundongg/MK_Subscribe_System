@@ -14,6 +14,24 @@ function isPasswordValid(password) {
   return hasLetter && hasDigit;
 }
 
+function getPasswordRuleMessage(password) {
+  if (!password) {
+    return "";
+  }
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return `비밀번호는 ${PASSWORD_MIN_LENGTH}자 이상이어야 합니다.`;
+  }
+  if (/\s/.test(password)) {
+    return "비밀번호에는 공백을 포함할 수 없습니다.";
+  }
+  const hasLetter = /\p{L}/u.test(password);
+  const hasDigit = /\p{N}/u.test(password);
+  if (!hasLetter || !hasDigit) {
+    return "비밀번호는 영문(또는 한글)과 숫자를 함께 포함해야 합니다.";
+  }
+  return "";
+}
+
 const INITIAL_SIGNUP_FORM = {
   loginId: "",
   password: "",
@@ -54,6 +72,8 @@ export function useProductAuth() {
   const passwordMatches =
     signupForm.passwordConfirm.trim() !== "" &&
     signupForm.password === signupForm.passwordConfirm;
+  const passwordRuleMessage = getPasswordRuleMessage(signupForm.password);
+  const passwordRuleSatisfied = signupForm.password.length > 0 && passwordRuleMessage === "";
 
   const canProceedSignup =
     signupForm.loginId.trim() !== "" &&
@@ -240,6 +260,8 @@ export function useProductAuth() {
     loginForm,
     idCheck,
     passwordMatches,
+    passwordRuleMessage,
+    passwordRuleSatisfied,
     canProceedSignup,
     canProceedLogin,
     passwordMinLength: PASSWORD_MIN_LENGTH,
