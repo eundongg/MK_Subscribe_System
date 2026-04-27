@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { SubscriptionHistoryRangeSection } from "../components/SubscriptionHistoryRangeSection";
@@ -9,38 +9,7 @@ const PERIODS = [
   { id: "90d", label: "최근 90일" },
   { id: "year", label: "올해" },
 ];
-
-function startOfDay(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function filterByPeriod(payments, periodId) {
-  if (periodId === "all") {
-    return payments;
-  }
-  const now = new Date();
-  if (periodId === "year") {
-    const y = now.getFullYear();
-    return payments.filter((p) => {
-      if (!p.payment_date) {
-        return false;
-      }
-      const t = new Date(p.payment_date);
-      return t.getFullYear() === y;
-    });
-  }
-  const days = periodId === "30d" ? 30 : 90;
-  const cutoff = startOfDay(now);
-  cutoff.setDate(cutoff.getDate() - days);
-  return payments.filter((p) => {
-    if (!p.payment_date) {
-      return false;
-    }
-    return new Date(p.payment_date) >= cutoff;
-  });
-}
+const PAGE_SIZE = 5;
 
 /** 상품 플랜 개월 우선, 없으면 구독 시작·종료일로 대략 개월 수 추정 */
 function subscriptionMonthsLabel(it) {
@@ -81,56 +50,129 @@ export default function PaymentReportPage({ currentUser }) {
   const navigate = useNavigate();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [period, setPeriod] = useState("all");
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [summary, setSummary] = useState({ count: 0, total: 0, lastDate: null });
+  const [hasScrollInteraction, setHasScrollInteraction] = useState(false);
+  const [observerLocked, setObserverLocked] = useState(false);
   const [expandedNo, setExpandedNo] = useState(null);
   const [itemsByPayment, setItemsByPayment] = useState({});
   const [itemsLoadingNo, setItemsLoadingNo] = useState(null);
   const [historyRows, setHistoryRows] = useState([]);
   const [productsByNo, setProductsByNo] = useState({});
   const [selectedRenewProduct, setSelectedRenewProduct] = useState(null);
+  const sentinelRef = useRef(null);
+
+  const fetchPayments = useCallback(
+    async ({ cursor = null, reset = false } = {}) => {
+      if (!currentUser) {
+        return;
+      }
+      if (reset) {
+        setLoading(true);
+        setLoadError("");
+      } else {
+        setIsFetchingMore(true);
+      }
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        params.set("period", period);
+        if (cursor) {
+          params.set("cursor", String(cursor));
+        }
+        const res = await fetch(`/api/me/payments?${params.toString()}`, { credentials: "include" });
+        const data = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(data?.message || "결제 내역을 불러오지 못했습니다.");
+        }
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setPayments((prev) => (reset ? items : [...prev, ...items]));
+        setNextCursor(data?.nextCursor || null);
+        setHasMore(Boolean(data?.hasMore));
+        setTotalCount(Number(data?.totalCount || 0));
+        setSummary({
+          count: Number(data?.totalCount || 0),
+          total: Number(data?.totalAmount || 0),
+          lastDate: data?.lastPaymentDate ? new Date(data.lastPaymentDate) : null,
+        });
+      } catch (err) {
+        setLoadError(err.message || "결제 내역을 불러오지 못했습니다.");
+        if (reset) {
+          setPayments([]);
+          setNextCursor(null);
+          setHasMore(false);
+          setTotalCount(0);
+          setSummary({ count: 0, total: 0, lastDate: null });
+        }
+      } finally {
+        setLoading(false);
+        setIsFetchingMore(false);
+      }
+    },
+    [currentUser, period]
+  );
 
   useEffect(() => {
     if (!currentUser) {
       setPayments([]);
       setLoading(false);
       setLoadError("");
-      return undefined;
+      setSummary({ count: 0, total: 0, lastDate: null });
+      return;
     }
+    setExpandedNo(null);
+    setItemsByPayment({});
+    setNextCursor(null);
+    setHasMore(true);
+    setObserverLocked(false);
+    fetchPayments({ reset: true });
+  }, [currentUser, period, fetchPayments]);
 
-    let cancelled = false;
-    setLoading(true);
-    setLoadError("");
+  const loadMorePayments = useCallback(() => {
+    if (!hasMore || loading || isFetchingMore || observerLocked) {
+      return;
+    }
+    setObserverLocked(true);
+    fetchPayments({ cursor: nextCursor });
+  }, [fetchPayments, hasMore, isFetchingMore, loading, nextCursor, observerLocked]);
 
-    fetch("/api/me/payments", { credentials: "include" })
-      .then(async (res) => {
-        const data = await res.json().catch(() => null);
-        if (!res.ok) {
-          throw new Error(data?.message || "결제 내역을 불러오지 못했습니다.");
-        }
-        return Array.isArray(data) ? data : [];
-      })
-      .then((rows) => {
-        if (!cancelled) {
-          setPayments(rows);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setLoadError(err.message || "결제 내역을 불러오지 못했습니다.");
-          setPayments([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
+  useEffect(() => {
+    const markInteracted = () => setHasScrollInteraction(true);
+    window.addEventListener("wheel", markInteracted, { passive: true });
+    window.addEventListener("touchmove", markInteracted, { passive: true });
+    window.addEventListener("scroll", markInteracted, { passive: true });
     return () => {
-      cancelled = true;
+      window.removeEventListener("wheel", markInteracted);
+      window.removeEventListener("touchmove", markInteracted);
+      window.removeEventListener("scroll", markInteracted);
     };
-  }, [currentUser?.member_no]);
+  }, []);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            setObserverLocked(false);
+            return;
+          }
+          if (entry.isIntersecting && hasScrollInteraction) {
+            loadMorePayments();
+          }
+        });
+      },
+      { root: null, rootMargin: "120px", threshold: 0.01 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasScrollInteraction, loadMorePayments]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -188,24 +230,6 @@ export default function PaymentReportPage({ currentUser }) {
       cancelled = true;
     };
   }, [currentUser?.member_no]);
-
-  const filtered = useMemo(() => filterByPeriod(payments, period), [payments, period]);
-
-  const summary = useMemo(() => {
-    const count = filtered.length;
-    const total = filtered.reduce((s, p) => s + Number(p.total_price || 0), 0);
-    let lastDate = null;
-    filtered.forEach((p) => {
-      if (!p.payment_date) {
-        return;
-      }
-      const t = new Date(p.payment_date);
-      if (!lastDate || t > lastDate) {
-        lastDate = t;
-      }
-    });
-    return { count, total, lastDate };
-  }, [filtered]);
 
   const renewTarget = useMemo(() => {
     if (!Array.isArray(historyRows) || historyRows.length === 0) {
@@ -329,7 +353,7 @@ export default function PaymentReportPage({ currentUser }) {
         </article>
         <article className="payment-report-stat">
           <span className="payment-report-stat-label">결제 건수</span>
-          <strong className="payment-report-stat-value">{summary.count.toLocaleString()}건</strong>
+          <strong className="payment-report-stat-value">{totalCount.toLocaleString()}건</strong>
         </article>
         <article className="payment-report-stat payment-report-stat-muted">
           <span className="payment-report-stat-label">가장 최근 결제</span>
@@ -361,14 +385,14 @@ export default function PaymentReportPage({ currentUser }) {
         <p className="payment-report-status">불러오는 중…</p>
       ) : loadError ? (
         <p className="payment-report-status payment-report-status-error">{loadError}</p>
-      ) : filtered.length === 0 ? (
+      ) : payments.length === 0 ? (
         <div className="payment-report-empty">
           <p>이 기간에 표시할 결제 내역이 없습니다.</p>
           <span>다른 기간을 선택해 보세요.</span>
         </div>
       ) : (
         <ul className="payment-report-timeline">
-          {filtered.map((p) => {
+          {payments.map((p) => {
             const open = expandedNo === p.payment_no;
             const items = itemsByPayment[p.payment_no];
             const loadingItems = itemsLoadingNo === p.payment_no;
@@ -446,6 +470,23 @@ export default function PaymentReportPage({ currentUser }) {
           })}
         </ul>
       )}
+      <div ref={sentinelRef} className="payment-report-sentinel" aria-hidden />
+      {isFetchingMore ? <p className="payment-report-loading-more">결제 내역을 더 불러오는 중...</p> : null}
+      {hasMore && !loading && payments.length > 0 ? (
+        <div className="payment-report-more-wrap">
+          <button
+            type="button"
+            className="btn-modal-cancel"
+            onClick={loadMorePayments}
+            disabled={isFetchingMore}
+          >
+            더 보기
+          </button>
+        </div>
+      ) : null}
+      {!hasMore && payments.length > 0 ? (
+        <p className="payment-report-end">마지막 결제 내역까지 불러왔습니다.</p>
+      ) : null}
 
       {selectedRenewProduct ? (
         <div className="modal-backdrop" onClick={() => setSelectedRenewProduct(null)}>

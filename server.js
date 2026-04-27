@@ -227,8 +227,58 @@ async function checkLoginId(req, res) {
   }
 }
 
-async function getUsers(_req, res) {
-  const sql = `
+async function getUsers(req, res) {
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 50) : 10;
+  const rawCursor = Number(req.query.cursor);
+  const cursor = Number.isFinite(rawCursor) && rawCursor > 0 ? rawCursor : null;
+  const keyword = String(req.query.keyword || '').trim();
+  const status = String(req.query.status || 'ALL').trim().toUpperCase();
+  const role = String(req.query.role || 'ALL').trim().toUpperCase();
+
+  const where = [];
+  const whereParams = [];
+
+  if (keyword) {
+    where.push('(u.name LIKE ? OR u.login_id LIKE ?)');
+    whereParams.push(`%${keyword}%`, `%${keyword}%`);
+  }
+
+  if (status !== 'ALL') {
+    const statusDbMap = {
+      ACTIVE: ['ACTIVE'],
+      DORMANT: ['DORMANT', 'INACTIVE', 'SLEEP'],
+      SUSPENDED: ['SUSPENDED', 'DELETED'],
+      INACTIVE: ['INACTIVE', 'SLEEP'],
+      SLEEP: ['SLEEP'],
+      DELETED: ['DELETED'],
+    };
+    const allowed = statusDbMap[status];
+    if (!allowed || allowed.length === 0) {
+      res.status(400).json({ message: '상태 필터 값이 올바르지 않습니다.' });
+      return;
+    }
+    const placeholders = allowed.map(() => '?').join(', ');
+    where.push(`u.status IN (${placeholders})`);
+    whereParams.push(...allowed);
+  }
+
+  if (role === 'ADMIN') {
+    where.push('u.is_admin = 1');
+  } else if (role === 'USER') {
+    where.push('u.is_admin = 0');
+  } else if (role !== 'ALL') {
+    res.status(400).json({ message: '권한 필터 값이 올바르지 않습니다.' });
+    return;
+  }
+
+  if (cursor) {
+    where.push('u.member_no < ?');
+    whereParams.push(cursor);
+  }
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+  const listSql = `
     SELECT
       u.member_no,
       u.name,
@@ -260,11 +310,30 @@ async function getUsers(_req, res) {
         AND (pi.end_date IS NULL OR pi.end_date >= CURDATE())
       GROUP BY p.member_no
     ) sub ON sub.member_no = u.member_no
+    ${whereClause}
     ORDER BY u.member_no DESC
+    LIMIT ?
   `;
+
+  const countWhere = where.filter((w) => w !== 'u.member_no < ?');
+  const countParams = cursor ? whereParams.slice(0, -1) : [...whereParams];
+  const countClause = countWhere.length > 0 ? `WHERE ${countWhere.join(' AND ')}` : '';
+  const countSql = `SELECT COUNT(*) AS total_count FROM user u ${countClause}`;
+
   try {
-    const users = await query(sql);
-    res.json(users);
+    const rows = await query(listSql, [...whereParams, limit + 1]);
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? items[items.length - 1]?.member_no || null : null;
+    const countRows = await query(countSql, countParams);
+    const totalCount = Number(countRows?.[0]?.total_count || 0);
+    res.json({
+      items,
+      nextCursor,
+      hasMore,
+      limit,
+      totalCount,
+    });
   } catch (err) {
     console.error('회원 조회 에러:', err);
     res.status(500).json({ message: '회원 조회 실패' });
@@ -472,7 +541,33 @@ async function getPaymentItems(req, res) {
 /** 본인 결제 목록(결제 리포트). 품목 기준으로 product_name 묶어서 표시용으로 전달. */
 async function getMyPayments(req, res) {
   const memberNo = req.session.user.member_no;
-  const sql = `
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 30) : 5;
+  const rawCursor = Number(req.query.cursor);
+  const cursor = Number.isFinite(rawCursor) && rawCursor > 0 ? rawCursor : null;
+  const period = String(req.query.period || "all").trim();
+
+  const where = ["p.member_no = ?"];
+  const params = [memberNo];
+
+  if (period === "30d") {
+    where.push("p.payment_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)");
+  } else if (period === "90d") {
+    where.push("p.payment_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)");
+  } else if (period === "year") {
+    where.push("YEAR(p.payment_date) = YEAR(CURDATE())");
+  } else if (period !== "all") {
+    res.status(400).json({ message: "기간 필터 값이 올바르지 않습니다." });
+    return;
+  }
+
+  if (cursor) {
+    where.push("p.payment_no < ?");
+    params.push(cursor);
+  }
+
+  const whereClause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const listSql = `
     SELECT
       p.payment_no,
       p.total_price,
@@ -483,14 +578,40 @@ async function getMyPayments(req, res) {
     INNER JOIN payment_method pm ON p.method_id = pm.method_id
     LEFT JOIN payment_items pi ON pi.payment_no = p.payment_no
     LEFT JOIN product pr ON pr.product_no = pi.product_no
-    WHERE p.member_no = ?
+    ${whereClause}
     GROUP BY p.payment_no, p.total_price, p.payment_date, pm.method_id, pm.method_name
-    ORDER BY p.payment_date DESC, p.payment_no DESC
+    ORDER BY p.payment_no DESC
+    LIMIT ?
+  `;
+
+  const countWhere = where.filter((w) => w !== "p.payment_no < ?");
+  const countParams = cursor ? params.slice(0, -1) : [...params];
+  const countClause = countWhere.length > 0 ? `WHERE ${countWhere.join(" AND ")}` : "";
+  const summarySql = `
+    SELECT
+      COUNT(*) AS total_count,
+      COALESCE(SUM(p.total_price), 0) AS total_amount,
+      MAX(p.payment_date) AS last_payment_date
+    FROM payment p
+    ${countClause}
   `;
 
   try {
-    const rows = await query(sql, [memberNo]);
-    res.json(rows);
+    const rows = await query(listSql, [...params, limit + 1]);
+    const hasMore = rows.length > limit;
+    const items = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? items[items.length - 1]?.payment_no || null : null;
+    const summaryRows = await query(summarySql, countParams);
+    const summary = summaryRows?.[0] || {};
+    res.json({
+      items,
+      nextCursor,
+      hasMore,
+      limit,
+      totalCount: Number(summary.total_count || 0),
+      totalAmount: Number(summary.total_amount || 0),
+      lastPaymentDate: summary.last_payment_date || null,
+    });
   } catch (err) {
     console.error('내 결제 조회 에러:', err);
     res.status(500).json({ message: '결제 내역을 불러오지 못했습니다.' });

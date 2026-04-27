@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const STATUS_LABEL = {
   ACTIVE: "활성",
@@ -18,6 +18,7 @@ const ROLE_OPTIONS = [
   { value: "ADMIN", label: "관리자" },
   { value: "USER", label: "일반회원" },
 ];
+const PAGE_SIZE = 10;
 
 function UsersPage() {
   const toUiStatus = (status) => {
@@ -31,8 +32,16 @@ function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasScrollInteraction, setHasScrollInteraction] = useState(false);
+  const [observerLocked, setObserverLocked] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
@@ -40,47 +49,119 @@ function UsersPage() {
   const [editIsAdmin, setEditIsAdmin] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
-    fetch("/api/admin/users", { credentials: "include" })
-      .then(async (response) => {
-        const data = await response.json();
+    const timer = setTimeout(() => {
+      setDebouncedKeyword(keyword.trim());
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [keyword]);
+
+  const fetchUsers = useCallback(
+    async ({ cursor = null, reset = false } = {}) => {
+      if (reset) {
+        setIsInitialLoading(true);
+      } else {
+        setIsFetchingMore(true);
+      }
+      if (reset) {
+        setLoadError("");
+      }
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        if (cursor) {
+          params.set("cursor", String(cursor));
+        }
+        if (debouncedKeyword) {
+          params.set("keyword", debouncedKeyword);
+        }
+        if (statusFilter !== "ALL") {
+          params.set("status", statusFilter);
+        }
+        if (roleFilter !== "ALL") {
+          params.set("role", roleFilter);
+        }
+        const response = await fetch(`/api/admin/users?${params.toString()}`, { credentials: "include" });
+        const data = await response.json().catch(() => null);
         if (!response.ok) {
-          console.error(data?.message || response.statusText);
-          setLoadError(
+          throw new Error(
             response.status === 401
               ? "관리자 데이터를 보려면 로그인이 필요합니다. 상품 페이지에서 로그인한 뒤 다시 시도해 주세요."
               : data?.message || "회원 목록을 불러오지 못했습니다."
           );
-          setUsers([]);
-          return;
         }
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setUsers((prev) => (reset ? items : [...prev, ...items]));
+        setNextCursor(data?.nextCursor || null);
+        setHasMore(Boolean(data?.hasMore));
+        setTotalCount(Number(data?.totalCount || 0));
         setLoadError("");
-        setUsers(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        console.error(err);
-        setLoadError("회원 목록을 불러오지 못했습니다.");
-        setUsers([]);
-      });
+      } catch (err) {
+        setLoadError(err.message || "회원 목록을 불러오지 못했습니다.");
+        if (reset) {
+          setUsers([]);
+          setNextCursor(null);
+          setHasMore(false);
+          setTotalCount(0);
+        }
+      } finally {
+        setIsInitialLoading(false);
+        setIsFetchingMore(false);
+      }
+    },
+    [debouncedKeyword, statusFilter, roleFilter]
+  );
+
+  useEffect(() => {
+    fetchUsers({ reset: true });
+  }, [fetchUsers]);
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || isInitialLoading || isFetchingMore || observerLocked) {
+      return;
+    }
+    setObserverLocked(true);
+    fetchUsers({ cursor: nextCursor });
+  }, [fetchUsers, hasMore, isInitialLoading, isFetchingMore, nextCursor, observerLocked]);
+
+  useEffect(() => {
+    const markInteracted = () => setHasScrollInteraction(true);
+    window.addEventListener("wheel", markInteracted, { passive: true });
+    window.addEventListener("touchmove", markInteracted, { passive: true });
+    window.addEventListener("scroll", markInteracted, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", markInteracted);
+      window.removeEventListener("touchmove", markInteracted);
+      window.removeEventListener("scroll", markInteracted);
+    };
   }, []);
 
-  const filteredUsers = users.filter((user) => {
-    const q = keyword.trim().toLowerCase();
-    const byKeyword =
-      q === "" ||
-      String(user.name || "")
-        .toLowerCase()
-        .includes(q) ||
-      String(user.login_id || "")
-        .toLowerCase()
-        .includes(q);
-    const byStatus = statusFilter === "ALL" || toUiStatus(user.status) === statusFilter;
-    const byRole =
-      roleFilter === "ALL" ||
-      (roleFilter === "ADMIN" ? Boolean(user.is_admin) : !Boolean(user.is_admin));
-    return byKeyword && byStatus && byRole;
-  });
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            setObserverLocked(false);
+            return;
+          }
+          if (entry.isIntersecting && hasScrollInteraction) {
+            loadMore();
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: "120px",
+        threshold: 0.01,
+      }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [loadMore, hasScrollInteraction]);
 
   const openUserDetail = async (memberNo) => {
     setDetailLoading(true);
@@ -145,7 +226,7 @@ function UsersPage() {
     <section className="list-container">
       <header>
         <h1>회원 조회 리스트</h1>
-        <span className="count-badge">총 {filteredUsers.length} 명</span>
+        <span className="count-badge">총 {totalCount.toLocaleString()} 명</span>
       </header>
       {loadError ? <p className="field-error">{loadError}</p> : null}
       <div className="admin-user-toolbar">
@@ -183,8 +264,8 @@ function UsersPage() {
           </tr>
         </thead>
         <tbody>
-          {filteredUsers.length > 0 ? (
-            filteredUsers.map((user, index) => (
+          {users.length > 0 ? (
+            users.map((user, index) => (
               <tr
                 key={user.member_no ?? index}
                 className="admin-user-row"
@@ -209,12 +290,22 @@ function UsersPage() {
           ) : (
             <tr>
               <td colSpan={6} style={{ textAlign: "center", padding: 50, color: "#ccc" }}>
-                {loadError ? "위 안내를 확인해 주세요." : "등록된 회원이 없습니다."}
+                {isInitialLoading ? "불러오는 중..." : loadError ? "위 안내를 확인해 주세요." : "등록된 회원이 없습니다."}
               </td>
             </tr>
           )}
         </tbody>
       </table>
+      <div ref={sentinelRef} className="admin-user-sentinel" aria-hidden />
+      {isFetchingMore ? <p className="admin-user-loading-more">회원 데이터를 더 불러오는 중...</p> : null}
+      {hasMore && !isInitialLoading ? (
+        <div className="admin-user-more-wrap">
+          <button type="button" className="btn-modal-cancel" onClick={loadMore} disabled={isFetchingMore}>
+            더 보기
+          </button>
+        </div>
+      ) : null}
+      {!hasMore && users.length > 0 ? <p className="admin-user-end">마지막 데이터까지 불러왔습니다.</p> : null}
 
       {detailLoading ? (
         <div className="modal-backdrop">
