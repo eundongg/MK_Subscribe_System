@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import { SubscriptionHistoryRangeSection } from "../../features/subscription/SubscriptionHistoryRangeSection";
+import { SubscriptionHistoryRangeSection } from "../components/SubscriptionHistoryRangeSection";
 
 const PERIODS = [
   { id: "all", label: "전체" },
@@ -399,7 +399,13 @@ export default function PaymentReportPage({ currentUser }) {
                     <div className="payment-report-card-body">
                       <div className="payment-report-card-top">
                         <span className="payment-report-card-product-names" title={p.product_names || ""}>
-                          {(p.product_names || "").trim() || ((items || []).map((x) => x.product_name).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ") || "상품 정보 없음")}
+                          {(p.product_names || "").trim() ||
+                            ((items || [])
+                              .map((x) => x.product_name)
+                              .filter(Boolean)
+                              .filter((v, i, a) => a.indexOf(v) === i)
+                              .join(", ") ||
+                              "상품 정보 없음")}
                         </span>
                         <span className="payment-report-card-amount">
                           {Number(p.total_price || 0).toLocaleString()}원

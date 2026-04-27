@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ProductCardTilt from "../../components/ProductCardTilt";
-import { PRODUCT_IMAGE_MAP } from "../../constants/productImageMap";
+import { PRODUCT_IMAGE_MAP } from "../../../constants/productImageMap";
+import ProductCardTilt from "../components/ProductCardTilt";
 
 function ProductsPage({ currentUser, onRequireLogin }) {
   const navigate = useNavigate();

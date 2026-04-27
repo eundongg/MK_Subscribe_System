@@ -127,7 +127,6 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
       })
       .filter(Boolean);
     const todayTs = Date.now();
-    const todayLabel = new Date(todayTs).toLocaleDateString("ko-KR");
 
     const minStart = Math.min(...data.map((p) => p.y[0]));
     const maxEnd = Math.max(...data.map((p) => p.y[1]));
@@ -147,8 +146,8 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
           toolbar: { show: false },
           fontFamily: '"Noto Sans KR", sans-serif',
           foreColor: "#58585a",
-          zoom: {enabled: false},
-          selection: {enabled: false},
+          zoom: { enabled: false },
+          selection: { enabled: false },
         },
         plotOptions: {
           bar: {
@@ -187,7 +186,7 @@ export function SubscriptionHistoryRangeSection({ currentUser }) {
               borderColor: "#ef4444",
               strokeDashArray: 6,
               label: {
-                text: `today`,
+                text: "today",
                 style: {
                   color: "#fff",
                   background: "#ef4444",

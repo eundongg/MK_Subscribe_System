@@ -3,18 +3,18 @@ import { Link, Navigate, Route, Routes } from "react-router-dom";
 import { AuthInlineActions } from "./features/auth/components/AuthInlineActions";
 import { AuthModal } from "./features/auth/components/AuthModal";
 import { useProductAuth } from "./features/auth/hooks/useProductAuth";
+import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
+import IntroductionPage from "./features/introduction/pages/IntroductionPage";
+import ProductsPage from "./features/products/pages/ProductsPage";
+import { SubscriptionAccumulatedSection } from "./features/report/components/SubscriptionAccumulatedSection";
+import PaymentReportPage from "./features/report/pages/PaymentReportPage";
 import UsersPage from "./pages/admin/UsersPage";
-import ProductsPage from "./pages/storefront/ProductsPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
 import PaymentItemsPage from "./pages/admin/PaymentItemsPage";
 import { LegacyPaymentRedirect } from "./LegacyPaymentRedirect";
 import { CheckoutPage } from "./pages/payment/Checkout";
 import { SuccessPage } from "./pages/payment/Success";
 import { FailPage } from "./pages/payment/Fail";
-import { SubscriptionAccumulatedSection } from "./features/subscription/SubscriptionAccumulatedSection";
-import { TodayPopularProducts } from "./features/home/TodayPopularProducts";
-import IntroductionPage from "./pages/IntroductionPage";
-import PaymentReportPage from "./pages/report/PaymentReportPage";
 
 function AdminRoute({ currentUser, children }) {
   if (!currentUser) {
