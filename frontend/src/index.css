@@ -726,6 +726,72 @@ td {
   color: var(--text-gray);
 }
 
+.admin-signup-chart-wrap {
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.admin-signup-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.admin-signup-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-signup-chart-select-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.admin-signup-chart-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text-dark);
+  min-width: 88px;
+}
+
+.admin-signup-chart-title {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.admin-signup-chart-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-gray);
+}
+
+.admin-signup-chart-placeholder {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-gray);
+}
+
+.admin-signup-chart-inner {
+  margin: 0 -8px;
+}
+
 .admin-user-toolbar {
   display: flex;
   gap: 8px;
@@ -839,8 +905,28 @@ td {
 .btn-detail {
   background: var(--primary);
   color: #fff;
-  padding: 6px 10px;
+  padding: 6px 7px;
   border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.admin-payment-detail-modal {
+  max-width: min(560px, 100%);
+}
+
+.admin-payment-detail-meta {
+  margin-top: -18px;
+  margin-bottom: 12px;
+}
+
+.admin-payment-detail-body {
+  max-height: min(52vh, 420px);
+  overflow-y: auto;
+  margin-bottom: 8px;
 }
 
 .item-row {
@@ -869,6 +955,7 @@ td {
 .date-info {
   color: var(--text-gray);
   margin: 0;
+  font-size: 13px;
 }
 
 .storefront-split {

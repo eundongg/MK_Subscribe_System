@@ -10,7 +10,6 @@ import { SubscriptionAccumulatedSection } from "./features/report/components/Sub
 import PaymentReportPage from "./features/report/pages/PaymentReportPage";
 import UsersPage from "./pages/admin/UsersPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
-import PaymentItemsPage from "./pages/admin/PaymentItemsPage";
 import { LegacyPaymentRedirect } from "./LegacyPaymentRedirect";
 import { CheckoutPage } from "./pages/payment/Checkout";
 import { SuccessPage } from "./pages/payment/Success";
@@ -172,14 +171,6 @@ function App() {
             element={
               <AdminRoute currentUser={auth.currentUser}>
                 <PaymentsPage />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/admin/payments/:id"
-            element={
-              <AdminRoute currentUser={auth.currentUser}>
-                <PaymentItemsPage />
               </AdminRoute>
             }
           />

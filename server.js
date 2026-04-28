@@ -486,6 +486,46 @@ async function updateUserAdminSettings(req, res) {
   }
 }
 
+/** 가입일(created_at) 기준, 특정 연·월의 일자별 가입자 수(1일~말일). 없는 날은 0. */
+async function getAdminSignupDailyInMonth(req, res) {
+  const year = Number(req.query.year);
+  const month = Number(req.query.month);
+  if (!Number.isFinite(year) || year < 1970 || year > 2100) {
+    res.status(400).json({ message: 'year 파라미터가 올바르지 않습니다.' });
+    return;
+  }
+  if (!Number.isFinite(month) || month < 1 || month > 12) {
+    res.status(400).json({ message: 'month 파라미터가 올바르지 않습니다.' });
+    return;
+  }
+
+  const lastDay = new Date(year, month, 0).getDate();
+
+  try {
+    const aggRows = await query(
+      `
+      SELECT DAY(created_at) AS d, COUNT(*) AS cnt
+      FROM user
+      WHERE created_at IS NOT NULL
+        AND YEAR(created_at) = ?
+        AND MONTH(created_at) = ?
+      GROUP BY DAY(created_at)
+      ORDER BY d ASC
+      `,
+      [year, month]
+    );
+    const map = new Map((aggRows || []).map((r) => [Number(r.d), Number(r.cnt) || 0]));
+    const series = [];
+    for (let day = 1; day <= lastDay; day += 1) {
+      series.push({ day, count: map.get(day) ?? 0 });
+    }
+    res.json({ year, month, series });
+  } catch (err) {
+    console.error('일자별 가입 통계 에러:', err);
+    res.status(500).json({ message: '일자별 가입 통계를 불러오지 못했습니다.' });
+  }
+}
+
 async function getProducts(_req, res) {
   try {
     const products = await query('SELECT * FROM product');
@@ -774,6 +814,7 @@ app.use('/api/admin', requireAdmin);
 app.get('/api/admin/users', getUsers);
 app.get('/api/admin/users/:memberNo', getUserDetail);
 app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
+app.get('/api/admin/signups-daily', getAdminSignupDailyInMonth);
 app.get('/api/admin/products', getProducts);
 app.get('/api/admin/payments', getPayments);
 app.get('/api/admin/payments/:id/items', getPaymentItems);

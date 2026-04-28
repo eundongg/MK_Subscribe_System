@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SignupMonthlyChart } from "../../features/admin/components/SignupMonthlyChart";
 
 const STATUS_LABEL = {
   ACTIVE: "활성",
@@ -228,6 +229,7 @@ function UsersPage() {
         <h1>회원 조회 리스트</h1>
         <span className="count-badge">총 {totalCount.toLocaleString()} 명</span>
       </header>
+      <SignupMonthlyChart />
       {loadError ? <p className="field-error">{loadError}</p> : null}
       <div className="admin-user-toolbar">
         <input

@@ -55,7 +55,6 @@ export default function IntroductionPage() {
       <section className="intro-section">
         <div className="intro-section-head">
           <h2>이용 가능한 서비스</h2>
-          <span className="intro-chip">회원 전용 기능 포함</span>
         </div>
         <div className="intro-service-grid">
           {services.map((service) => (
