@@ -1051,6 +1051,15 @@ td {
   font-size: 13px;
 }
 
+.admin-payment-share-report {
+  margin-bottom: 18px;
+}
+
+.admin-payment-share-donut {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
 .storefront-split {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.15fr);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import ReactApexChart from "react-apexcharts";
 import { useSearchParams } from "react-router-dom";
 
 function parsePaymentNo(raw) {
@@ -22,6 +23,10 @@ function PaymentsPage() {
   const [detailItems, setDetailItems] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [shareRows, setShareRows] = useState([]);
+  const [shareLoading, setShareLoading] = useState(true);
+  const [shareError, setShareError] = useState("");
+  const [shareTotal, setShareTotal] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin/payments", { credentials: "include" })
@@ -45,6 +50,44 @@ function PaymentsPage() {
         setListLoadError("결제 내역을 불러오지 못했습니다.");
         setPayments([]);
       });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setShareLoading(true);
+    setShareError("");
+    fetch("/api/admin/report/product-payment-share", { credentials: "include" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.message || "상품별 결제 비율을 불러오지 못했습니다.");
+        }
+        return data || {};
+      })
+      .then((data) => {
+        if (cancelled) {
+          return;
+        }
+        const items = Array.isArray(data.items) ? data.items : [];
+        setShareRows(items);
+        setShareTotal(Number(data.totalLineCount || 0));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error(err);
+          setShareError(err.message || "상품별 결제 비율을 불러오지 못했습니다.");
+          setShareRows([]);
+          setShareTotal(0);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setShareLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -108,6 +151,47 @@ function PaymentsPage() {
     return payments.find((p) => Number(p.payment_no) === detailPaymentNo) || null;
   }, [payments, detailPaymentNo]);
 
+  const donutSpec = useMemo(() => {
+    if (shareRows.length === 0) {
+      return null;
+    }
+    const labels = shareRows.map((r) => r.product_name);
+    const series = shareRows.map((r) => Number(r.line_count || 0));
+    const colors = shareRows.map((r) => {
+      const name = String(r.product_name || "").replace(/\s+/g, "");
+      if (name.includes("매경e신문")) return "#f36f21";
+      if (name.includes("매경이코노미")) return "#2563eb";
+      if (name.includes("매경럭스맨")) return "#16a34a";
+      return "#7c3aed";
+    });
+    return {
+      series,
+      options: {
+        chart: {
+          type: "donut",
+          fontFamily: '"Noto Sans KR", sans-serif',
+          toolbar: { show: false },
+        },
+        labels,
+        colors,
+        dataLabels: {
+          enabled: true,
+          formatter: (val) => `${Number(val).toFixed(1)}%`,
+        },
+ 
+        legend: {
+          position: "bottom",
+          fontSize: "12px",
+        },
+        tooltip: {
+          y: {
+            formatter: (val) => `${Number(val || 0).toLocaleString()}건`,
+          },
+        },
+      },
+    };
+  }, [shareRows, shareTotal]);
+
   return (
     <section className="list-container">
       <header>
@@ -124,6 +208,23 @@ function PaymentsPage() {
           누적 {payments.length}건
         </span>
       </header>
+      <section className="main-report admin-payment-share-report">
+        <div className="main-home-head">
+          <h1>상품별 결제 비율</h1>
+          <span className="main-report-caption">고객 결제에서 각 상품이 차지하는 비율 (라인 기준)</span>
+        </div>
+        {shareLoading ? (
+          <p className="subscription-chart-status">불러오는 중…</p>
+        ) : shareError ? (
+          <p className="subscription-chart-status subscription-chart-error">{shareError}</p>
+        ) : !donutSpec ? (
+          <p className="subscription-chart-status">표시할 결제 데이터가 없습니다.</p>
+        ) : (
+          <div className="subscription-chart-wrap admin-payment-share-donut">
+            <ReactApexChart options={donutSpec.options} series={donutSpec.series} type="donut" height={350} />
+          </div>
+        )}
+      </section>
       {listLoadError ? <p className="field-error">{listLoadError}</p> : null}
       <table>
         <thead>

@@ -159,7 +159,7 @@ export function SignupMonthlyChart() {
         </div>
       </div>
       <p className="admin-signup-chart-hint">
-        {periodLabel} 기준 가입일(등록일)의 일자별 신규 가입 인원입니다. 가로축은 해당 월의 일수(1일~말일)입니다.
+        {periodLabel} 기준 가입일(등록일)의 일자별 신규 가입 인원입니다.
       </p>
       {loading ? (
         <p className="admin-signup-chart-placeholder">통계를 불러오는 중…</p>

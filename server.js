@@ -689,6 +689,37 @@ async function deleteProduct(req, res) {
   }
 }
 
+/** 관리자: 상품별 결제 비율(라인 기준) */
+async function getAdminProductPaymentShare(_req, res) {
+  const sql = `
+    SELECT
+      pi.product_no,
+      COALESCE(pr.product_name, CONCAT('삭제된 상품 #', pi.product_no)) AS product_name,
+      COUNT(*) AS line_count
+    FROM payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    LEFT JOIN product pr ON pr.product_no = pi.product_no
+    GROUP BY pi.product_no, pr.product_name
+    ORDER BY line_count DESC, product_name ASC
+  `;
+
+  try {
+    const rows = await query(sql);
+    const items = Array.isArray(rows)
+      ? rows.map((r) => ({
+          product_no: Number(r.product_no),
+          product_name: r.product_name,
+          line_count: Number(r.line_count) || 0,
+        }))
+      : [];
+    const totalLineCount = items.reduce((sum, r) => sum + (Number(r.line_count) || 0), 0);
+    res.json({ totalLineCount, items });
+  } catch (err) {
+    console.error('관리자 상품 결제 비율 조회 에러:', err);
+    res.status(500).json({ message: '상품별 결제 비율을 불러오지 못했습니다.' });
+  }
+}
+
 async function getPayments(_req, res) {
   const sql = `
     SELECT
@@ -970,6 +1001,7 @@ app.get('/api/admin/users/:memberNo', getUserDetail);
 app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
 app.get('/api/admin/signups-daily', getAdminSignupDailyInMonth);
 app.get('/api/admin/products', getProducts);
+app.get('/api/admin/report/product-payment-share', getAdminProductPaymentShare);
 app.post(
   '/api/admin/products',
   (req, res, next) => {
