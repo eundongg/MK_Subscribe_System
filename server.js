@@ -1,6 +1,8 @@
 // server.js
+const fs = require('fs');
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
@@ -13,7 +15,45 @@ if (!process.env.SESSION_SECRET) {
 }
 
 app.use(express.static('resources'));
+
+const productUploadsDir = path.join(__dirname, 'public', 'uploads', 'products');
+try {
+  fs.mkdirSync(productUploadsDir, { recursive: true });
+} catch (e) {
+  console.warn('업로드 디렉터리 생성 실패:', e?.message);
+}
+app.use('/uploads/products', express.static(productUploadsDir));
+
 app.use(express.json());
+
+const productImageStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, productUploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const safeExt = allowed.includes(ext) ? ext : '.png';
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 12)}${safeExt}`);
+  },
+});
+
+const uploadProductImage = multer({
+  storage: productImageStorage,
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (!file || !file.originalname) {
+      cb(null, true);
+      return;
+    }
+    const ok = /^image\/(jpeg|pjpeg|png|gif|webp)$/i.test(file.mimetype || '');
+    if (!ok) {
+      cb(new Error('JPEG, PNG, GIF, WebP 이미지만 업로드할 수 있습니다.'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -536,6 +576,119 @@ async function getProducts(_req, res) {
   }
 }
 
+async function ensureProductImageUrlColumn() {
+  try {
+    await query('ALTER TABLE product ADD COLUMN image_url VARCHAR(512) NULL');
+    console.log('DB: product.image_url 컬럼 추가됨');
+  } catch (err) {
+    const dup =
+      err.code === 'ER_DUP_FIELDNAME' ||
+      err.errno === 1060 ||
+      /Duplicate column name/i.test(String(err.sqlMessage || err.message));
+    if (!dup) {
+      console.warn('DB: product.image_url 확인:', err.message);
+    }
+  }
+}
+
+async function createProduct(req, res) {
+  const product_name = String(req.body.product_name || '').trim();
+  const description = String(req.body.description ?? '').trim();
+  const rawPrice = Number(req.body.price);
+  const rawMonths = Number(req.body.duration_months);
+
+  if (!product_name) {
+    res.status(400).json({ message: '상품 이름을 입력해 주세요.' });
+    return;
+  }
+  if (!Number.isFinite(rawPrice) || rawPrice < 0) {
+    res.status(400).json({ message: '가격을 0 이상의 숫자로 입력해 주세요.' });
+    return;
+  }
+  if (!Number.isFinite(rawMonths) || rawMonths < 1 || rawMonths > 120) {
+    res.status(400).json({ message: '구독 기간은 1~120개월 사이로 입력해 주세요.' });
+    return;
+  }
+
+  const price = Math.round(rawPrice);
+  const duration_months = Math.round(rawMonths);
+  let image_url = null;
+  if (req.file && req.file.filename) {
+    image_url = `/uploads/products/${req.file.filename}`;
+  }
+
+  try {
+    const insertResult = await query(
+      'INSERT INTO product (product_name, description, price, duration_months, image_url) VALUES (?, ?, ?, ?, ?)',
+      [product_name, description || null, price, duration_months, image_url]
+    );
+    const insertId = insertResult.insertId;
+    const rows = await query('SELECT * FROM product WHERE product_no = ? LIMIT 1', [insertId]);
+    res.status(201).json(rows[0] || null);
+  } catch (err) {
+    console.error('상품 등록 에러:', err);
+    const noImageCol = /Unknown column 'image_url'|image_url/i.test(String(err.message || ''));
+    if (noImageCol) {
+      try {
+        const insertResult = await query(
+          'INSERT INTO product (product_name, description, price, duration_months) VALUES (?, ?, ?, ?)',
+          [product_name, description || null, price, duration_months]
+        );
+        const insertId = insertResult.insertId;
+        const rows = await query('SELECT * FROM product WHERE product_no = ? LIMIT 1', [insertId]);
+        res.status(201).json(rows[0] || null);
+      } catch (err2) {
+        console.error('상품 등록(이미지 제외) 에러:', err2);
+        res.status(500).json({ message: '상품 등록에 실패했습니다.' });
+      }
+      return;
+    }
+    res.status(500).json({ message: '상품 등록에 실패했습니다.' });
+  }
+}
+
+async function deleteProduct(req, res) {
+  const productNo = Number(req.params.productNo);
+  if (!Number.isFinite(productNo) || productNo <= 0) {
+    res.status(400).json({ message: '유효하지 않은 상품 번호입니다.' });
+    return;
+  }
+
+  try {
+    const rows = await query('SELECT product_no, image_url FROM product WHERE product_no = ? LIMIT 1', [productNo]);
+    if (!rows || rows.length === 0) {
+      res.status(404).json({ message: '상품을 찾을 수 없습니다.' });
+      return;
+    }
+
+    await query('DELETE FROM product WHERE product_no = ?', [productNo]);
+
+    const imageUrl = String(rows[0]?.image_url || '');
+    if (imageUrl.startsWith('/uploads/products/')) {
+      const filename = path.basename(imageUrl);
+      const filePath = path.join(productUploadsDir, filename);
+      fs.unlink(filePath, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.warn('상품 이미지 파일 삭제 실패:', err.message);
+        }
+      });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('상품 삭제 에러:', err);
+    const referenced =
+      err.code === 'ER_ROW_IS_REFERENCED_2' ||
+      err.code === 'ER_ROW_IS_REFERENCED' ||
+      /foreign key constraint fails/i.test(String(err.message || ''));
+    if (referenced) {
+      res.status(409).json({ message: '결제/구독 내역에서 사용 중인 상품은 삭제할 수 없습니다.' });
+      return;
+    }
+    res.status(500).json({ message: '상품 삭제에 실패했습니다.' });
+  }
+}
+
 async function getPayments(_req, res) {
   const sql = `
     SELECT
@@ -777,7 +930,8 @@ async function getPopularProducts(_req, res) {
       p.product_name,
       p.description,
       p.price,
-      p.duration_months
+      p.duration_months,
+      p.image_url
     FROM product p
     LEFT JOIN (
       SELECT pi.product_no, SUM(pr2.duration_months) AS total_m
@@ -816,6 +970,20 @@ app.get('/api/admin/users/:memberNo', getUserDetail);
 app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
 app.get('/api/admin/signups-daily', getAdminSignupDailyInMonth);
 app.get('/api/admin/products', getProducts);
+app.post(
+  '/api/admin/products',
+  (req, res, next) => {
+    uploadProductImage.single('image')(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ message: err.message || '이미지 업로드 오류입니다.' });
+        return;
+      }
+      next();
+    });
+  },
+  createProduct
+);
+app.delete('/api/admin/products/:productNo', deleteProduct);
 app.get('/api/admin/payments', getPayments);
 app.get('/api/admin/payments/:id/items', getPaymentItems);
 
@@ -838,6 +1006,9 @@ app.use((req, res) => {
 });
 
 
-app.listen(port, () => {
-  console.log(`웹 서버가 http://localhost:${port} 에서 대기 중입니다.`);
-});
+(async () => {
+  await ensureProductImageUrlColumn();
+  app.listen(port, () => {
+    console.log(`웹 서버가 http://localhost:${port} 에서 대기 중입니다.`);
+  });
+})();

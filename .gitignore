@@ -6,3 +6,6 @@ frontend/node_modules/
 actions-runner/
 
 sql/
+
+public/uploads/products/*
+!public/uploads/products/.gitkeep

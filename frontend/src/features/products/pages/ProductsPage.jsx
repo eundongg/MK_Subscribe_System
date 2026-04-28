@@ -1,15 +1,20 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PRODUCT_IMAGE_MAP } from "../../../constants/productImageMap";
+import { AdminProductRegisterModal } from "../components/AdminProductRegisterModal";
 import ProductCardTilt from "../components/ProductCardTilt";
+import { getProductImageSrc } from "../utils/productImage";
 
 function ProductsPage({ currentUser, onRequireLogin }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [subscribeTarget, setSubscribeTarget] = useState(null);
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  useEffect(() => {
+  const refreshProducts = useCallback(() => {
     fetch("/api/store/products")
       .then((response) => response.json())
       .then(setProducts)
@@ -18,6 +23,10 @@ function ProductsPage({ currentUser, onRequireLogin }) {
         setProducts([]);
       });
   }, []);
+
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
 
   const handleOpenSubscribeModal = (product) => {
     if (!currentUser) {
@@ -76,6 +85,33 @@ function ProductsPage({ currentUser, onRequireLogin }) {
     card.style.setProperty("--bundle-light-y", "0%");
   };
 
+  const handleDeleteProduct = async () => {
+    const productNo = Number(deleteTarget?.product_no);
+    if (!Number.isFinite(productNo) || productNo <= 0) {
+      return;
+    }
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      const response = await fetch(`/api/admin/products/${productNo}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "상품 삭제에 실패했습니다.");
+      }
+      setDeleteTarget(null);
+      setSelectedProducts((prev) => prev.filter((item) => item.product_no !== productNo));
+      refreshProducts();
+    } catch (err) {
+      console.error(err);
+      setDeleteError(err.message || "상품 삭제에 실패했습니다.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <>
       <section className="list-container">
@@ -85,9 +121,16 @@ function ProductsPage({ currentUser, onRequireLogin }) {
         </header>
         <section className="storefront-split">
           <section className="product-list-pane">
-            <p className="product-list-guide">
-              왼쪽 목록에서 상품을 선택해 상세 정보를 확인하세요. (최대 2개 선택 가능)
-            </p>
+            <div className="product-list-pane-head">
+              <p className="product-list-guide">
+                왼쪽 목록에서 상품을 선택해 상세 정보를 확인하세요. (최대 2개 선택 가능)
+              </p>
+              {currentUser?.is_admin ? (
+                <button type="button" className="btn-register-product" onClick={() => setRegisterModalOpen(true)}>
+                  상품 등록
+                </button>
+              ) : null}
+            </div>
             <section className="product-grid">
               {products.map((product) => {
                 const isActive = selectedProducts.some(
@@ -110,7 +153,7 @@ function ProductsPage({ currentUser, onRequireLogin }) {
                   >
                     <img
                       className="product-thumb"
-                      src={PRODUCT_IMAGE_MAP[product.product_name] || "/image/매경e신문.png"}
+                      src={getProductImageSrc(product)}
                       alt={product.product_name}
                     />
                     <div className="product-body">
@@ -134,7 +177,7 @@ function ProductsPage({ currentUser, onRequireLogin }) {
               <article className="product-detail-card">
                 <img
                   className="product-detail-thumb"
-                  src={PRODUCT_IMAGE_MAP[firstSelected.product_name] || "/image/매경e신문.png"}
+                  src={getProductImageSrc(firstSelected)}
                   alt={firstSelected.product_name}
                 />
                 <div className="product-detail-body">
@@ -162,6 +205,18 @@ function ProductsPage({ currentUser, onRequireLogin }) {
                   >
                     이 상품 구독하기
                   </button>
+                  {currentUser?.is_admin ? (
+                    <button
+                      type="button"
+                      className="btn-delete-product"
+                      onClick={() => {
+                        setDeleteError("");
+                        setDeleteTarget(firstSelected);
+                      }}
+                    >
+                      상품 삭제
+                    </button>
+                  ) : null}
                 </div>
               </article>
             ) : isBundleSelected ? (
@@ -173,12 +228,12 @@ function ProductsPage({ currentUser, onRequireLogin }) {
                 <div className="bundle-thumb-stack">
                   <img
                     className="product-detail-thumb product-detail-thumb-split"
-                    src={PRODUCT_IMAGE_MAP[firstSelected.product_name] || "/image/매경e신문.png"}
+                    src={getProductImageSrc(firstSelected)}
                     alt={firstSelected.product_name}
                   />
                   <img
                     className="product-detail-thumb product-detail-thumb-split"
-                    src={PRODUCT_IMAGE_MAP[secondSelected.product_name] || "/image/매경e신문.png"}
+                    src={getProductImageSrc(secondSelected)}
                     alt={secondSelected.product_name}
                   />
                 </div>
@@ -222,6 +277,46 @@ function ProductsPage({ currentUser, onRequireLogin }) {
           </section>
         </section>
       </section>
+
+      {registerModalOpen ? (
+        <AdminProductRegisterModal
+          onClose={() => setRegisterModalOpen(false)}
+          onRegistered={() => {
+            refreshProducts();
+          }}
+        />
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="modal-backdrop" onClick={() => (deleteLoading ? null : setDeleteTarget(null))}>
+          <section className="confirm-modal" onClick={(event) => event.stopPropagation()}>
+            <h2>상품을 삭제할까요?</h2>
+            <p className="confirm-product-name">{deleteTarget.product_name}</p>
+            <p className="confirm-help-text">
+              삭제 후 복구할 수 없습니다. 결제/구독 내역에서 사용 중인 상품은 삭제되지 않습니다.
+            </p>
+            {deleteError ? <p className="field-error">{deleteError}</p> : null}
+            <div className="confirm-actions">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteLoading}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="btn-modal-confirm btn-danger"
+                onClick={handleDeleteProduct}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "삭제 중..." : "삭제"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {subscribeTarget ? (
         <div className="modal-backdrop" onClick={() => setSubscribeTarget(null)}>
