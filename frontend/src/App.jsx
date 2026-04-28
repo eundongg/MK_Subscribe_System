@@ -122,12 +122,14 @@ function App() {
         </Link>
         <nav className="top-nav-links">
           <Link to="/introduction">소개</Link>
-          <Link to="/products">상품</Link>
-          {auth.currentUser ? <Link to="/report/payments">결제 리포트</Link> : null}
+          <Link to="/products">{auth.currentUser?.is_admin ? "상품 관리" : "상품"}</Link>
+          {auth.currentUser && !auth.currentUser?.is_admin ? (
+            <Link to="/report/payments">결제 리포트</Link>
+          ) : null}
           {auth.currentUser?.is_admin ? (
             <>
-              <Link to="/admin/users">회원</Link>
-              <Link to="/admin/payments">결제내역</Link>
+              <Link to="/admin/users">회원 관리</Link>
+              <Link to="/admin/payments">결제 관리</Link>
             </>
           ) : null}
         </nav>

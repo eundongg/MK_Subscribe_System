@@ -1060,6 +1060,27 @@ td {
   margin: 0 auto;
 }
 
+.admin-payment-share-donut .apexcharts-canvas *:focus {
+  outline: none !important;
+}
+
+.admin-payment-share-donut .apexcharts-series path:focus,
+.admin-payment-share-donut .apexcharts-series g:focus,
+.admin-payment-share-donut .apexcharts-pie-area.apexcharts-active,
+.admin-payment-share-donut .apexcharts-pie-area.apexcharts-selected,
+.admin-payment-share-donut .apexcharts-series .apexcharts-active,
+.admin-payment-share-donut .apexcharts-series .apexcharts-selected {
+  outline: none !important;
+  filter: none !important;
+  stroke: transparent !important;
+  stroke-width: 0 !important;
+}
+
+.admin-payment-share-donut .apexcharts-selection-rect,
+.admin-payment-share-donut .apexcharts-xcrosshairs {
+  display: none !important;
+}
+
 .storefront-split {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.15fr);

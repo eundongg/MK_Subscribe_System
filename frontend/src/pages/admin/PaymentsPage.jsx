@@ -168,9 +168,23 @@ function PaymentsPage() {
       series,
       options: {
         chart: {
+          events: {
+            dataPointSelection: (event, chartContext, config) => {
+              event?.preventDefault?.();
+              return false;
+            },
+          },
           type: "donut",
           fontFamily: '"Noto Sans KR", sans-serif',
           toolbar: { show: false },
+        },
+        plotOptions: {
+          pie: {
+            expandOnClick: false,
+          },
+        },
+        states: {
+          active: { filter: { type: "none" } },
         },
         labels,
         colors,
@@ -182,10 +196,30 @@ function PaymentsPage() {
         legend: {
           position: "bottom",
           fontSize: "12px",
+          onItemClick: {
+            toggleDataSeries: false,
+          },
         },
         tooltip: {
-          y: {
-            formatter: (val) => `${Number(val || 0).toLocaleString()}건`,
+          custom: ({ seriesIndex }) => {
+            const row = shareRows[seriesIndex];
+            if (!row) {
+              return "";
+            }
+            const count = Number(row.line_count || 0);
+            const sharePct = Number(row.share_pct || 0);
+            const yoy = row.yoy_pct;
+            const yoyText =
+              yoy == null
+                ? "작년 대비 데이터 없음"
+                : `작년 대비 ${Math.abs(Number(yoy)).toFixed(1)}%${Number(yoy) >= 0 ? "↑" : "↓"}`;
+            return `
+              <div class="apex-tooltip-custom">
+                <strong>${row.product_name}</strong><br/>
+                ${count.toLocaleString()}건 (${sharePct.toFixed(1)}%)<br/>
+                ${yoyText}
+              </div>
+            `;
           },
         },
       },
