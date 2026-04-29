@@ -862,6 +862,10 @@ async function getAdminProductPaymentShare(_req, res) {
 async function getPayments(req, res) {
   const period = String(req.query.period || 'all').toLowerCase();
   const sort = String(req.query.sort || 'date_desc').toLowerCase();
+  const rawLimit = Number(req.query.limit);
+  const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : null;
+  const rawOffset = Number(req.query.offset);
+  const offset = Number.isFinite(rawOffset) && rawOffset >= 0 ? rawOffset : 0;
 
   const periodClauseMap = {
     all: '',
@@ -901,10 +905,35 @@ async function getPayments(req, res) {
     ${periodClause}
     ORDER BY ${orderBy}
   `;
+  const countSql = `
+    SELECT COUNT(*) AS total_count
+    FROM payment p
+    JOIN user u ON p.member_no = u.member_no
+    JOIN payment_method pm ON p.method_id = pm.method_id
+    WHERE 1=1
+    ${periodClause}
+  `;
 
   try {
-    const payments = await query(sql);
-    res.json(payments);
+    if (!limit) {
+      const payments = await query(sql);
+      res.json(payments);
+      return;
+    }
+
+    const pagedSql = `${sql} LIMIT ? OFFSET ?`;
+    const [rows, countRows] = await Promise.all([query(pagedSql, [limit, offset]), query(countSql)]);
+    const totalCount = Number(countRows?.[0]?.total_count || 0);
+    const nextOffset = offset + (Array.isArray(rows) ? rows.length : 0);
+    const hasMore = nextOffset < totalCount;
+    res.json({
+      items: Array.isArray(rows) ? rows : [],
+      totalCount,
+      limit,
+      offset,
+      nextOffset: hasMore ? nextOffset : null,
+      hasMore,
+    });
   } catch (err) {
     console.error('결제 조회 에러:', err);
     res.status(500).json({ message: '결제 조회 실패' });

@@ -108,6 +108,9 @@ export function PaymentDailyChart({ onSelectDay }) {
         colors: ["#2563eb"],
         xaxis: {
           categories,
+          tooltip: {
+            enabled: false,
+          },
           title: { text: "일 (해당 월)" },
           labels: {
             rotate: manyDays ? -45 : 0,

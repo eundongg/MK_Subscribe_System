@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactApexChart from "react-apexcharts";
 import { useSearchParams } from "react-router-dom";
 import { PaymentDailyChart } from "../../features/admin/components/PaymentDailyChart";
@@ -15,10 +15,16 @@ function parsePaymentNo(raw) {
 }
 
 function PaymentsPage() {
+  const PAGE_SIZE = 10;
   const [searchParams, setSearchParams] = useSearchParams();
   const detailPaymentNo = useMemo(() => parsePaymentNo(searchParams.get("payment")), [searchParams]);
 
   const [payments, setPayments] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [nextOffset, setNextOffset] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [listLoadError, setListLoadError] = useState("");
 
   const [detailItems, setDetailItems] = useState([]);
@@ -35,35 +41,100 @@ function PaymentsPage() {
 
   const [periodFilter, setPeriodFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("date_desc");
+  const [hasScrollInteraction, setHasScrollInteraction] = useState(false);
+  const [observerLocked, setObserverLocked] = useState(false);
+  const sentinelRef = useRef(null);
 
-  useEffect(() => {
+  const fetchPayments = useCallback(async ({ offset = 0, reset = false } = {}) => {
+    if (reset) {
+      setIsInitialLoading(true);
+      setListLoadError("");
+    } else {
+      setIsFetchingMore(true);
+    }
     const params = new URLSearchParams();
     if (periodFilter !== "all") {
       params.set("period", periodFilter);
     }
     params.set("sort", sortOrder);
-    fetch(`/api/admin/payments?${params.toString()}`, { credentials: "include" })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) {
-          console.error(data?.message || response.statusText);
-          setListLoadError(
-            response.status === 401
-              ? "관리자 데이터를 보려면 로그인이 필요합니다. 상품 페이지에서 로그인한 뒤 다시 시도해 주세요."
-              : data?.message || "결제 내역을 불러오지 못했습니다."
-          );
-          setPayments([]);
-          return;
-        }
-        setListLoadError("");
-        setPayments(Array.isArray(data) ? data : []);
-      })
-      .catch((err) => {
-        console.error(err);
-        setListLoadError("결제 내역을 불러오지 못했습니다.");
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", String(offset));
+    try {
+      const response = await fetch(`/api/admin/payments?${params.toString()}`, { credentials: "include" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(
+          response.status === 401
+            ? "관리자 데이터를 보려면 로그인이 필요합니다. 상품 페이지에서 로그인한 뒤 다시 시도해 주세요."
+            : data?.message || "결제 내역을 불러오지 못했습니다."
+        );
+      }
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setPayments((prev) => (reset ? items : [...prev, ...items]));
+      setTotalCount(Number(data?.totalCount || 0));
+      setNextOffset(data?.nextOffset ?? null);
+      setHasMore(Boolean(data?.hasMore));
+      setListLoadError("");
+    } catch (err) {
+      console.error(err);
+      setListLoadError(err.message || "결제 내역을 불러오지 못했습니다.");
+      if (reset) {
         setPayments([]);
-      });
+        setTotalCount(0);
+        setNextOffset(null);
+        setHasMore(false);
+      }
+    } finally {
+      setIsInitialLoading(false);
+      setIsFetchingMore(false);
+    }
   }, [periodFilter, sortOrder]);
+
+  useEffect(() => {
+    setObserverLocked(false);
+    fetchPayments({ offset: 0, reset: true });
+  }, [fetchPayments]);
+
+  const loadMorePayments = useCallback(() => {
+    if (!hasMore || isInitialLoading || isFetchingMore || observerLocked) {
+      return;
+    }
+    setObserverLocked(true);
+    fetchPayments({ offset: Number(nextOffset || 0), reset: false });
+  }, [fetchPayments, hasMore, isInitialLoading, isFetchingMore, nextOffset, observerLocked]);
+
+  useEffect(() => {
+    const markInteracted = () => setHasScrollInteraction(true);
+    window.addEventListener("wheel", markInteracted, { passive: true });
+    window.addEventListener("touchmove", markInteracted, { passive: true });
+    window.addEventListener("scroll", markInteracted, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", markInteracted);
+      window.removeEventListener("touchmove", markInteracted);
+      window.removeEventListener("scroll", markInteracted);
+    };
+  }, []);
+
+  useEffect(() => {
+    const node = sentinelRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            setObserverLocked(false);
+            return;
+          }
+          if (entry.isIntersecting && hasScrollInteraction) {
+            loadMorePayments();
+          }
+        });
+      },
+      { root: null, rootMargin: "120px", threshold: 0.01 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasScrollInteraction, loadMorePayments]);
 
   useEffect(() => {
     let cancelled = false;
@@ -287,7 +358,7 @@ function PaymentsPage() {
             fontSize: 13,
           }}
         >
-          누적 {payments.length}건
+          누적 {totalCount.toLocaleString()}건
         </span>
       </header>
       <section className="main-report admin-payment-share-report">
@@ -375,12 +446,26 @@ function PaymentsPage() {
           ) : (
             <tr>
               <td colSpan={5} style={{ textAlign: "center", padding: 50, color: "#ccc" }}>
-                {listLoadError ? "위 안내를 확인해 주세요." : "등록된 결제 내역이 없습니다."}
+                {isInitialLoading
+                  ? "불러오는 중..."
+                  : listLoadError
+                    ? "위 안내를 확인해 주세요."
+                    : "등록된 결제 내역이 없습니다."}
               </td>
             </tr>
           )}
         </tbody>
       </table>
+      <div ref={sentinelRef} className="admin-user-sentinel" aria-hidden />
+      {isFetchingMore ? <p className="admin-user-loading-more">결제 데이터를 더 불러오는 중...</p> : null}
+      {hasMore && !isInitialLoading ? (
+        <div className="admin-user-more-wrap">
+          <button type="button" className="btn-modal-cancel" onClick={loadMorePayments} disabled={isFetchingMore}>
+            더 보기
+          </button>
+        </div>
+      ) : null}
+      {!hasMore && payments.length > 0 ? <p className="admin-user-end">마지막 데이터까지 불러왔습니다.</p> : null}
 
       {detailPaymentNo != null ? (
         <div className="modal-backdrop" onClick={closeDetail}>
