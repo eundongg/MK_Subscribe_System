@@ -691,7 +691,17 @@ async function deleteProduct(req, res) {
 
 /** 관리자: 상품별 결제 비율(라인 기준) */
 async function getAdminProductPaymentShare(_req, res) {
-  const sql = `
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const currentStart = `${currentYear}-01-01`;
+  const currentEnd = `${currentYear}-${mm}-${dd}`;
+  const prevStart = `${currentYear - 1}-01-01`;
+  const prevEnd = `${currentYear - 1}-${mm}-${dd}`;
+
+  // 도넛 점유율: 전체 누적 기준
+  const currentSql = `
     SELECT
       pi.product_no,
       COALESCE(pr.product_name, CONCAT('삭제된 상품 #', pi.product_no)) AS product_name,
@@ -702,25 +712,110 @@ async function getAdminProductPaymentShare(_req, res) {
     GROUP BY pi.product_no, pr.product_name
     ORDER BY line_count DESC, product_name ASC
   `;
+  // YOY 계산용 현재/전년 동기 기준(동일 기간 비교)
+  const currentYoySql = `
+    SELECT
+      pi.product_no,
+      COUNT(*) AS current_yoy_line_count
+    FROM payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    WHERE DATE(p.payment_date) BETWEEN ? AND ?
+    GROUP BY pi.product_no
+  `;
+  const prevSql = `
+    SELECT
+      pi.product_no,
+      COUNT(*) AS prev_line_count
+    FROM payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    WHERE DATE(p.payment_date) BETWEEN ? AND ?
+    GROUP BY pi.product_no
+  `;
 
   try {
-    const rows = await query(sql);
-    const items = Array.isArray(rows)
-      ? rows.map((r) => ({
+    const [currentRows, currentYoyRows, prevRows] = await Promise.all([
+      query(currentSql),
+      query(currentYoySql, [currentStart, currentEnd]),
+      query(prevSql, [prevStart, prevEnd]),
+    ]);
+
+    const currentYoyByProduct = new Map(
+      (Array.isArray(currentYoyRows) ? currentYoyRows : []).map((r) => [
+        Number(r.product_no),
+        Number(r.current_yoy_line_count) || 0,
+      ])
+    );
+    const prevCountByProduct = new Map(
+      (Array.isArray(prevRows) ? prevRows : []).map((r) => [Number(r.product_no), Number(r.prev_line_count) || 0])
+    );
+
+    const baseItems = Array.isArray(currentRows)
+      ? currentRows.map((r) => ({
           product_no: Number(r.product_no),
           product_name: r.product_name,
           line_count: Number(r.line_count) || 0,
         }))
       : [];
-    const totalLineCount = items.reduce((sum, r) => sum + (Number(r.line_count) || 0), 0);
-    res.json({ totalLineCount, items });
+    const totalLineCount = baseItems.reduce((sum, r) => sum + (Number(r.line_count) || 0), 0);
+    const items = baseItems.map((r) => {
+      const allTimeCount = Number(r.line_count) || 0;
+      const current = currentYoyByProduct.get(Number(r.product_no)) || 0;
+      const prev = prevCountByProduct.get(Number(r.product_no)) || 0;
+      const sharePct = totalLineCount > 0 ? (allTimeCount / totalLineCount) * 100 : 0;
+      const yoyPct = prev > 0 ? ((current - prev) / prev) * 100 : null;
+      return {
+        ...r,
+        current_yoy_line_count: current,
+        prev_line_count: prev,
+        share_pct: Number(sharePct.toFixed(2)),
+        yoy_pct: yoyPct == null ? null : Number(yoyPct.toFixed(2)),
+      };
+    });
+
+    res.json({
+      totalLineCount,
+      period: {
+        current_start: currentStart,
+        current_end: currentEnd,
+        previous_start: prevStart,
+        previous_end: prevEnd,
+      },
+      items,
+    });
   } catch (err) {
     console.error('관리자 상품 결제 비율 조회 에러:', err);
     res.status(500).json({ message: '상품별 결제 비율을 불러오지 못했습니다.' });
   }
 }
 
-async function getPayments(_req, res) {
+async function getPayments(req, res) {
+  const period = String(req.query.period || 'all').toLowerCase();
+  const sort = String(req.query.sort || 'date_desc').toLowerCase();
+
+  const periodClauseMap = {
+    all: '',
+    today: 'AND DATE(p.payment_date) = CURDATE()',
+    '7d': 'AND p.payment_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)',
+    '30d': 'AND p.payment_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)',
+  };
+  const periodClause = periodClauseMap[period];
+  if (periodClause === undefined) {
+    res.status(400).json({ message: 'period 값이 올바르지 않습니다.' });
+    return;
+  }
+
+  const orderMap = {
+    date_desc: 'p.payment_date DESC, p.payment_no DESC',
+    date_asc: 'p.payment_date ASC, p.payment_no ASC',
+    amount_desc: 'p.total_price DESC, p.payment_date DESC',
+    amount_asc: 'p.total_price ASC, p.payment_date DESC',
+  };
+  const orderBy = orderMap[sort];
+  if (!orderBy) {
+    res.status(400).json({ message: 'sort 값이 올바르지 않습니다.' });
+    return;
+  }
+
   const sql = `
     SELECT
       p.payment_no,
@@ -731,6 +826,9 @@ async function getPayments(_req, res) {
     FROM payment p
     JOIN user u ON p.member_no = u.member_no
     JOIN payment_method pm ON p.method_id = pm.method_id
+    WHERE 1=1
+    ${periodClause}
+    ORDER BY ${orderBy}
   `;
 
   try {

@@ -28,8 +28,16 @@ function PaymentsPage() {
   const [shareError, setShareError] = useState("");
   const [shareTotal, setShareTotal] = useState(0);
 
+  const [periodFilter, setPeriodFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("date_desc");
+
   useEffect(() => {
-    fetch("/api/admin/payments", { credentials: "include" })
+    const params = new URLSearchParams();
+    if (periodFilter !== "all") {
+      params.set("period", periodFilter);
+    }
+    params.set("sort", sortOrder);
+    fetch(`/api/admin/payments?${params.toString()}`, { credentials: "include" })
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
@@ -50,7 +58,7 @@ function PaymentsPage() {
         setListLoadError("결제 내역을 불러오지 못했습니다.");
         setPayments([]);
       });
-  }, []);
+  }, [periodFilter, sortOrder]);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,7 +219,7 @@ function PaymentsPage() {
             const yoy = row.yoy_pct;
             const yoyText =
               yoy == null
-                ? "작년 대비 데이터 없음"
+                ? "작년 대비 신규"
                 : `작년 대비 ${Math.abs(Number(yoy)).toFixed(1)}%${Number(yoy) >= 0 ? "↑" : "↓"}`;
             return `
               <div class="apex-tooltip-custom">
@@ -245,7 +253,7 @@ function PaymentsPage() {
       <section className="main-report admin-payment-share-report">
         <div className="main-home-head">
           <h1>상품별 결제 비율</h1>
-          <span className="main-report-caption">고객 결제에서 각 상품이 차지하는 비율 (라인 기준)</span>
+          <span className="main-report-caption">고객 결제에서 각 상품이 차지하는 비율</span>
         </div>
         {shareLoading ? (
           <p className="subscription-chart-status">불러오는 중…</p>
@@ -256,10 +264,44 @@ function PaymentsPage() {
         ) : (
           <div className="subscription-chart-wrap admin-payment-share-donut">
             <ReactApexChart options={donutSpec.options} series={donutSpec.series} type="donut" height={350} />
+            <div className="admin-payment-donut-center-block" aria-hidden />
           </div>
         )}
       </section>
       {listLoadError ? <p className="field-error">{listLoadError}</p> : null}
+      <div className="admin-payment-list-toolbar">
+        <div className="admin-payment-filter-chips">
+          <span className="admin-payment-toolbar-label">기간</span>
+          {[
+            { id: "all", label: "전체" },
+            { id: "today", label: "오늘" },
+            { id: "7d", label: "최근 7일" },
+            { id: "30d", label: "최근 30일" },
+          ].map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              className={`admin-payment-chip${periodFilter === chip.id ? " is-active" : ""}`}
+              onClick={() => setPeriodFilter(chip.id)}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+        <label className="admin-payment-sort-wrap">
+          정렬
+          <select
+            className="admin-payment-sort-select"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+          >
+            <option value="date_desc">최신순</option>
+            <option value="date_asc">과거순</option>
+            <option value="amount_desc">금액 높은순</option>
+            <option value="amount_asc">금액 낮은순</option>
+          </select>
+        </label>
+      </div>
       <table>
         <thead>
           <tr>

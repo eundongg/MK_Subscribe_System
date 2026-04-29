@@ -820,7 +820,7 @@ td {
 }
 
 .admin-signup-chart-wrap {
-  margin-bottom: 24px;
+  margin-bottom: 75px;
   padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1058,6 +1058,78 @@ td {
 .admin-payment-share-donut {
   max-width: 760px;
   margin: 0 auto;
+  position: relative;
+}
+
+.admin-payment-list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-payment-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-payment-toolbar-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-right: 4px;
+}
+
+.admin-payment-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+}
+
+.admin-payment-chip.is-active {
+  border-color: var(--primary);
+  background: #eef4ff;
+  color: #1d4ed8;
+}
+
+.admin-payment-sort-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.admin-payment-sort-select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: #fff;
+  color: var(--text-dark);
+  min-width: 140px;
+}
+
+.admin-payment-donut-center-block {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  background: transparent;
+  pointer-events: auto;
 }
 
 .admin-payment-share-donut .apexcharts-canvas *:focus {
