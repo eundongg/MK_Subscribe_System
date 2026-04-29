@@ -566,6 +566,77 @@ async function getAdminSignupDailyInMonth(req, res) {
   }
 }
 
+/** 결제일(payment_date) 기준, 특정 연·월의 일자별 결제 건수(1일~말일). 없는 날은 0. */
+async function getAdminPaymentsDailyInMonth(req, res) {
+  const year = Number(req.query.year);
+  const month = Number(req.query.month);
+  if (!Number.isFinite(year) || year < 1970 || year > 2100) {
+    res.status(400).json({ message: 'year 파라미터가 올바르지 않습니다.' });
+    return;
+  }
+  if (!Number.isFinite(month) || month < 1 || month > 12) {
+    res.status(400).json({ message: 'month 파라미터가 올바르지 않습니다.' });
+    return;
+  }
+
+  const lastDay = new Date(year, month, 0).getDate();
+
+  try {
+    const aggRows = await query(
+      `
+      SELECT DAY(payment_date) AS d, COUNT(*) AS cnt
+      FROM payment
+      WHERE payment_date IS NOT NULL
+        AND YEAR(payment_date) = ?
+        AND MONTH(payment_date) = ?
+      GROUP BY DAY(payment_date)
+      ORDER BY d ASC
+      `,
+      [year, month]
+    );
+    const map = new Map((aggRows || []).map((r) => [Number(r.d), Number(r.cnt) || 0]));
+    const series = [];
+    for (let day = 1; day <= lastDay; day += 1) {
+      series.push({ day, count: map.get(day) ?? 0 });
+    }
+    res.json({ year, month, series });
+  } catch (err) {
+    console.error('일자별 결제 통계 에러:', err);
+    res.status(500).json({ message: '일자별 결제 통계를 불러오지 못했습니다.' });
+  }
+}
+
+/** 특정 날짜(YYYY-MM-DD)의 결제 목록 */
+async function getAdminPaymentsByDate(req, res) {
+  const date = String(req.query.date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    res.status(400).json({ message: 'date 파라미터 형식은 YYYY-MM-DD 여야 합니다.' });
+    return;
+  }
+
+  const sql = `
+    SELECT
+      p.payment_no,
+      p.total_price,
+      p.payment_date,
+      u.name AS member_name,
+      pm.method_name
+    FROM payment p
+    JOIN user u ON p.member_no = u.member_no
+    JOIN payment_method pm ON p.method_id = pm.method_id
+    WHERE DATE(p.payment_date) = ?
+    ORDER BY p.payment_date DESC, p.payment_no DESC
+  `;
+
+  try {
+    const rows = await query(sql, [date]);
+    res.json({ date, items: Array.isArray(rows) ? rows : [] });
+  } catch (err) {
+    console.error('일자별 결제 목록 조회 에러:', err);
+    res.status(500).json({ message: '일자별 결제 목록을 불러오지 못했습니다.' });
+  }
+}
+
 async function getProducts(_req, res) {
   try {
     const products = await query('SELECT * FROM product');
@@ -1098,6 +1169,8 @@ app.get('/api/admin/users', getUsers);
 app.get('/api/admin/users/:memberNo', getUserDetail);
 app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
 app.get('/api/admin/signups-daily', getAdminSignupDailyInMonth);
+app.get('/api/admin/payments-daily', getAdminPaymentsDailyInMonth);
+app.get('/api/admin/payments-by-date', getAdminPaymentsByDate);
 app.get('/api/admin/products', getProducts);
 app.get('/api/admin/report/product-payment-share', getAdminProductPaymentShare);
 app.post(

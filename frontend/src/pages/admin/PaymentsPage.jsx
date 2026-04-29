@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ReactApexChart from "react-apexcharts";
 import { useSearchParams } from "react-router-dom";
+import { PaymentDailyChart } from "../../features/admin/components/PaymentDailyChart";
 
 function parsePaymentNo(raw) {
   if (raw == null || raw === "") {
@@ -23,6 +24,10 @@ function PaymentsPage() {
   const [detailItems, setDetailItems] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [dayModalDate, setDayModalDate] = useState("");
+  const [dayModalItems, setDayModalItems] = useState([]);
+  const [dayModalLoading, setDayModalLoading] = useState(false);
+  const [dayModalError, setDayModalError] = useState("");
   const [shareRows, setShareRows] = useState([]);
   const [shareLoading, setShareLoading] = useState(true);
   const [shareError, setShareError] = useState("");
@@ -152,6 +157,36 @@ function PaymentsPage() {
     setSearchParams({});
   };
 
+  const closeDayModal = () => {
+    setDayModalDate("");
+    setDayModalItems([]);
+    setDayModalError("");
+    setDayModalLoading(false);
+  };
+
+  const openPaymentsOfDay = async ({ year, month, day }) => {
+    const date = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    setDayModalDate(date);
+    setDayModalLoading(true);
+    setDayModalError("");
+    setDayModalItems([]);
+    try {
+      const params = new URLSearchParams();
+      params.set("date", date);
+      const response = await fetch(`/api/admin/payments-by-date?${params.toString()}`, { credentials: "include" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "해당 날짜 결제 목록을 불러오지 못했습니다.");
+      }
+      setDayModalItems(Array.isArray(data?.items) ? data.items : []);
+    } catch (err) {
+      console.error(err);
+      setDayModalError(err.message || "해당 날짜 결제 목록을 불러오지 못했습니다.");
+    } finally {
+      setDayModalLoading(false);
+    }
+  };
+
   const selectedPayment = useMemo(() => {
     if (detailPaymentNo == null) {
       return null;
@@ -217,10 +252,15 @@ function PaymentsPage() {
             const count = Number(row.line_count || 0);
             const sharePct = Number(row.share_pct || 0);
             const yoy = row.yoy_pct;
+            const yoyNum = yoy == null ? null : Number(yoy);
             const yoyText =
-              yoy == null
+              yoyNum == null
                 ? "작년 대비 신규"
-                : `작년 대비 ${Math.abs(Number(yoy)).toFixed(1)}%${Number(yoy) >= 0 ? "↑" : "↓"}`;
+                : yoyNum > 0
+                  ? `작년 대비 ${Math.abs(yoyNum).toFixed(1)}%↑`
+                  : yoyNum < 0
+                    ? `작년 대비 ${Math.abs(yoyNum).toFixed(1)}%↓`
+                    : "작년 대비 변화 없음";
             return `
               <div class="apex-tooltip-custom">
                 <strong>${row.product_name}</strong><br/>
@@ -268,6 +308,7 @@ function PaymentsPage() {
           </div>
         )}
       </section>
+      <PaymentDailyChart onSelectDay={openPaymentsOfDay} />
       {listLoadError ? <p className="field-error">{listLoadError}</p> : null}
       <div className="admin-payment-list-toolbar">
         <div className="admin-payment-filter-chips">
@@ -386,6 +427,48 @@ function PaymentsPage() {
             )}
             <div className="confirm-actions">
               <button type="button" className="btn-modal-cancel" onClick={closeDetail}>
+                닫기
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {dayModalDate ? (
+        <div className="modal-backdrop" onClick={closeDayModal}>
+          <section className="confirm-modal admin-payment-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <h2>일자별 결제 목록</h2>
+            <p className="admin-payment-detail-meta confirm-help-text">{dayModalDate}</p>
+            {dayModalLoading ? (
+              <p className="confirm-help-text">목록을 불러오는 중…</p>
+            ) : (
+              <>
+                {dayModalError ? <p className="field-error">{dayModalError}</p> : null}
+                {!dayModalError && dayModalItems.length > 0 ? (
+                  <div className="admin-payment-detail-body">
+                    {dayModalItems.map((payment) => (
+                      <article className="item-row" key={payment.payment_no}>
+                        <div className="item-header">
+                          <span className="product-no">결제번호: {payment.payment_no}</span>
+                          <span className="price">{Number(payment.total_price || 0).toLocaleString()}원</span>
+                        </div>
+                        <p className="date-info">
+                          {payment.member_name || "-"} · {payment.method_name || "-"} ·{" "}
+                          {payment.payment_date ? new Date(payment.payment_date).toLocaleString("ko-KR") : "-"}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+                {!dayModalLoading && !dayModalError && dayModalItems.length === 0 ? (
+                  <p className="confirm-help-text" style={{ textAlign: "center", padding: "20px 0" }}>
+                    해당 날짜의 결제 데이터가 없습니다.
+                  </p>
+                ) : null}
+              </>
+            )}
+            <div className="confirm-actions">
+              <button type="button" className="btn-modal-cancel" onClick={closeDayModal}>
                 닫기
               </button>
             </div>
