@@ -32,18 +32,18 @@ function formatDateKo(value) {
   return d.toLocaleDateString("ko-KR");
 }
 
-function formatStartForApi(startVal) {
-  if (startVal == null || startVal === "") {
-    return null;
+function formatDateTimeKo(value) {
+  if (value == null || value === "") {
+    return "—";
   }
-  if (typeof startVal === "string") {
-    return startVal.length >= 10 ? startVal.slice(0, 10) : null;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+    return value;
   }
-  const d = new Date(startVal);
+  const d = new Date(value);
   if (Number.isNaN(d.getTime())) {
-    return null;
+    return String(value);
   }
-  return d.toISOString().slice(0, 10);
+  return d.toLocaleString("ko-KR", { hour12: false });
 }
 
 function subscriptionLineKey(line) {
@@ -454,7 +454,7 @@ function UsersPage() {
 
             <div className="admin-user-subscription-extend">
               <p className="admin-user-detail-label">활성 구독 기간 조정</p>
-              
+
               {(selectedUser.activeSubscriptionLines || []).length > 0 ? (
                 <div className="admin-user-subscription-table-wrap">
                   <table className="admin-user-subscription-table">
@@ -527,6 +527,38 @@ function UsersPage() {
                   {extendMessage}
                 </p>
               ) : null}
+            </div>
+
+            <div className="admin-user-subscription-log">
+              <p className="admin-user-detail-label">기간 조정 이력</p>
+              {(selectedUser.adjustmentLogs || []).length > 0 ? (
+                <div className="admin-user-subscription-log-wrap">
+                  <table className="admin-user-subscription-log-table">
+                    <thead>
+                      <tr>
+                        <th>일시</th>
+                        <th>관리자</th>
+                        <th>상품</th>
+                        <th>변경</th>
+                        <th>만료일 변경</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedUser.adjustmentLogs.map((log) => (
+                        <tr key={log.id}>
+                          <td>{formatDateTimeKo(log.created_at_text || log.created_at)}</td>
+                          <td>{log.admin_name || `#${log.admin_member_no}`}</td>
+                          <td>{log.product_name || `#${log.product_no}`}</td>
+                          <td>{`${Number(log.add_days || 0) >= 0 ? "+" : ""}${Number(log.add_days || 0)}일`}</td>
+                          <td>{`${formatDateKo(log.before_end_date)} -> ${formatDateKo(log.after_end_date)}`}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="confirm-help-text">기간 조정 이력이 없습니다.</p>
+              )}
             </div>
 
             <div className="admin-user-edit-row">

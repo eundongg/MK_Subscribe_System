@@ -438,6 +438,29 @@ async function getUserDetail(req, res) {
     GROUP BY pr.product_name
     ORDER BY active_count DESC, pr.product_name ASC
   `;
+  const adjustmentLogsSql = `
+    SELECT
+      l.id,
+      l.created_at,
+      DATE_FORMAT(CONVERT_TZ(l.created_at, '+00:00', '+09:00'), '%Y-%m-%d %H:%i:%s') AS created_at_text,
+      l.admin_member_no,
+      au.name AS admin_name,
+      l.target_member_no,
+      l.payment_no,
+      l.product_no,
+      COALESCE(pr.product_name, CONCAT('삭제된 상품 #', l.product_no)) AS product_name,
+      l.start_date_key,
+      l.add_days,
+      l.before_end_date,
+      l.after_end_date,
+      l.reason
+    FROM admin_subscription_adjustment_log l
+    LEFT JOIN user au ON au.member_no = l.admin_member_no
+    LEFT JOIN product pr ON pr.product_no = l.product_no
+    WHERE l.target_member_no = ?
+    ORDER BY l.id DESC
+    LIMIT 15
+  `;
 
   try {
     const rows = await query(userSql, [memberNo]);
@@ -465,11 +488,24 @@ async function getUserDetail(req, res) {
       ORDER BY pr.product_name ASC, pi.start_date ASC, pi.payment_no ASC
     `;
     const activeSubscriptionLines = await query(activeLinesSql, [memberNo]);
+    let adjustmentLogs = [];
+    try {
+      adjustmentLogs = await query(adjustmentLogsSql, [memberNo]);
+    } catch (logErr) {
+      const noLogTable =
+        logErr.code === 'ER_NO_SUCH_TABLE' ||
+        /admin_subscription_adjustment_log/i.test(String(logErr.message || logErr.sqlMessage || ''));
+      if (!noLogTable) {
+        throw logErr;
+      }
+      adjustmentLogs = [];
+    }
 
     res.json({
       user: rows[0],
       activeProducts: Array.isArray(activeProducts) ? activeProducts : [],
       activeSubscriptionLines: Array.isArray(activeSubscriptionLines) ? activeSubscriptionLines : [],
+      adjustmentLogs: Array.isArray(adjustmentLogs) ? adjustmentLogs : [],
     });
   } catch (err) {
     console.error('회원 상세 조회 에러:', err);
@@ -524,14 +560,82 @@ async function extendUserActiveSubscription(req, res) {
       AND (pi.end_date IS NULL OR DATE(pi.end_date) >= CURDATE())
       ${startClause}
   `;
+  const selectCurrentSql = `
+    SELECT
+      pi.end_date
+    FROM payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    WHERE p.member_no = ?
+      AND pi.payment_no = ?
+      AND pi.product_no = ?
+      AND pi.status = 'ING'
+      AND (pi.end_date IS NULL OR DATE(pi.end_date) >= CURDATE())
+      ${startClause}
+    ORDER BY pi.start_date ASC
+    LIMIT 1
+  `;
+  const insertedReason = String(req.body.reason || '').trim() || null;
+  const adminMemberNo = Number(req.session?.user?.member_no) || 0;
 
   try {
+    const currentRows = await query(selectCurrentSql, params.slice(1));
+    const current = currentRows?.[0];
+    if (!current) {
+      res.status(404).json({
+        message: '연장할 활성 구독을 찾지 못했습니다. 만료되었거나 이미 종료된 라인일 수 있습니다.',
+      });
+      return;
+    }
+    const beforeEndDate = current.end_date ? new Date(current.end_date) : null;
+    const baseDate = beforeEndDate && !Number.isNaN(beforeEndDate.getTime()) ? beforeEndDate : new Date();
+    const afterEndDateObj = new Date(baseDate);
+    afterEndDateObj.setDate(afterEndDateObj.getDate() + addDays);
+    const afterEndDate = afterEndDateObj.toISOString().slice(0, 10);
+
     const result = await query(sql, params);
     if (!result.affectedRows) {
       res.status(404).json({
         message: '연장할 활성 구독을 찾지 못했습니다. 만료되었거나 이미 종료된 라인일 수 있습니다.',
       });
       return;
+    }
+    try {
+      await query(
+        `
+        INSERT INTO admin_subscription_adjustment_log
+        (
+          admin_member_no,
+          target_member_no,
+          payment_no,
+          product_no,
+          start_date_key,
+          add_days,
+          before_end_date,
+          after_end_date,
+          reason
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        [
+          adminMemberNo,
+          memberNo,
+          paymentNo,
+          productNo,
+          startDateKey,
+          addDays,
+          beforeEndDate ? beforeEndDate.toISOString().slice(0, 10) : null,
+          afterEndDate,
+          insertedReason,
+        ]
+      );
+    } catch (logErr) {
+      const noLogTable =
+        logErr.code === 'ER_NO_SUCH_TABLE' ||
+        /admin_subscription_adjustment_log/i.test(String(logErr.message || logErr.sqlMessage || ''));
+      if (!noLogTable) {
+        throw logErr;
+      }
+      console.warn('구독 기간 조정 이력 테이블이 없어 로그를 건너뜁니다.');
     }
     res.json({ ok: true, affectedRows: result.affectedRows });
   } catch (err) {

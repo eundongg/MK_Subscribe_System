@@ -966,10 +966,8 @@ td {
   margin-bottom: 18px;
 }
 
-.admin-user-subscription-hint {
-  margin-bottom: 10px;
-  font-size: 12px;
-  line-height: 1.45;
+.admin-user-subscription-log {
+  margin-bottom: 18px;
 }
 
 .admin-user-subscription-table-wrap {
@@ -1000,6 +998,38 @@ td {
 }
 
 .admin-user-subscription-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-user-subscription-log-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-user-subscription-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.admin-user-subscription-log-table th,
+.admin-user-subscription-log-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.admin-user-subscription-log-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--text-gray);
+  font-size: 12px;
+}
+
+.admin-user-subscription-log-table tr:last-child td {
   border-bottom: none;
 }
 
