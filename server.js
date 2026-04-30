@@ -446,13 +446,97 @@ async function getUserDetail(req, res) {
       return;
     }
     const activeProducts = await query(productSummarySql, [memberNo]);
+
+    const activeLinesSql = `
+      SELECT
+        pi.payment_no,
+        pi.product_no,
+        pr.product_name,
+        pi.start_date,
+        DATE_FORMAT(pi.start_date, '%Y-%m-%d') AS start_date_key,
+        pi.end_date,
+        pi.status
+      FROM payment_items pi
+      INNER JOIN payment p ON p.payment_no = pi.payment_no
+      INNER JOIN product pr ON pr.product_no = pi.product_no
+      WHERE p.member_no = ?
+        AND pi.status = 'ING'
+        AND (pi.end_date IS NULL OR DATE(pi.end_date) >= CURDATE())
+      ORDER BY pr.product_name ASC, pi.start_date ASC, pi.payment_no ASC
+    `;
+    const activeSubscriptionLines = await query(activeLinesSql, [memberNo]);
+
     res.json({
       user: rows[0],
       activeProducts: Array.isArray(activeProducts) ? activeProducts : [],
+      activeSubscriptionLines: Array.isArray(activeSubscriptionLines) ? activeSubscriptionLines : [],
     });
   } catch (err) {
     console.error('회원 상세 조회 에러:', err);
     res.status(500).json({ message: '회원 상세 조회 실패' });
+  }
+}
+
+/** 활성 구독 라인(payment_items) 종료일 연장 — 회원·결제 소유 검증. */
+async function extendUserActiveSubscription(req, res) {
+  const memberNo = Number(req.params.memberNo);
+  if (!Number.isFinite(memberNo) || memberNo <= 0) {
+    res.status(400).json({ message: '유효하지 않은 회원 번호입니다.' });
+    return;
+  }
+
+  const paymentNo = Number(req.body.paymentNo);
+  const productNo = Number(req.body.productNo);
+  const addDays = Number(req.body.addDays);
+  const hasStartDateKey = Object.prototype.hasOwnProperty.call(req.body, 'startDateKey');
+  const startDateKeyRaw = req.body.startDateKey;
+  const startDateKey =
+    typeof startDateKeyRaw === 'string' && String(startDateKeyRaw).trim() !== ''
+      ? String(startDateKeyRaw).trim().slice(0, 10)
+      : null;
+
+  if (!Number.isFinite(paymentNo) || paymentNo <= 0 || !Number.isFinite(productNo) || productNo <= 0) {
+    res.status(400).json({ message: '결제번호와 상품번호가 필요합니다.' });
+    return;
+  }
+  if (!Number.isFinite(addDays) || addDays < 1 || addDays > 3650) {
+    res.status(400).json({ message: '연장 일수는 1~3650 사이로 입력해 주세요.' });
+    return;
+  }
+
+  const params = [addDays, memberNo, paymentNo, productNo];
+  let startClause = '';
+  if (hasStartDateKey && startDateKeyRaw === null) {
+    startClause = ' AND pi.start_date IS NULL ';
+  } else if (startDateKey && /^\d{4}-\d{2}-\d{2}$/.test(startDateKey)) {
+    startClause = ' AND DATE(pi.start_date) = ? ';
+    params.push(startDateKey);
+  }
+
+  const sql = `
+    UPDATE payment_items pi
+    INNER JOIN payment p ON p.payment_no = pi.payment_no
+    SET pi.end_date = DATE_ADD(DATE(COALESCE(pi.end_date, CURDATE())), INTERVAL ? DAY)
+    WHERE p.member_no = ?
+      AND pi.payment_no = ?
+      AND pi.product_no = ?
+      AND pi.status = 'ING'
+      AND (pi.end_date IS NULL OR DATE(pi.end_date) >= CURDATE())
+      ${startClause}
+  `;
+
+  try {
+    const result = await query(sql, params);
+    if (!result.affectedRows) {
+      res.status(404).json({
+        message: '연장할 활성 구독을 찾지 못했습니다. 만료되었거나 이미 종료된 라인일 수 있습니다.',
+      });
+      return;
+    }
+    res.json({ ok: true, affectedRows: result.affectedRows });
+  } catch (err) {
+    console.error('구독 기간 연장 에러:', err);
+    res.status(500).json({ message: '구독 기간 연장에 실패했습니다.' });
   }
 }
 
@@ -1197,6 +1281,7 @@ app.use('/api/admin', requireAdmin);
 app.get('/api/admin/users', getUsers);
 app.get('/api/admin/users/:memberNo', getUserDetail);
 app.patch('/api/admin/users/:memberNo', updateUserAdminSettings);
+app.patch('/api/admin/users/:memberNo/subscription/extend', extendUserActiveSubscription);
 app.get('/api/admin/signups-daily', getAdminSignupDailyInMonth);
 app.get('/api/admin/payments-daily', getAdminPaymentsDailyInMonth);
 app.get('/api/admin/payments-by-date', getAdminPaymentsByDate);

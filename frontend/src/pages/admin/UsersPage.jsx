@@ -21,6 +21,35 @@ const ROLE_OPTIONS = [
 ];
 const PAGE_SIZE = 10;
 
+function formatDateKo(value) {
+  if (value == null || value === "") {
+    return "—";
+  }
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    return String(value);
+  }
+  return d.toLocaleDateString("ko-KR");
+}
+
+function formatStartForApi(startVal) {
+  if (startVal == null || startVal === "") {
+    return null;
+  }
+  if (typeof startVal === "string") {
+    return startVal.length >= 10 ? startVal.slice(0, 10) : null;
+  }
+  const d = new Date(startVal);
+  if (Number.isNaN(d.getTime())) {
+    return null;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+function subscriptionLineKey(line) {
+  return `${line.payment_no}-${line.product_no}-${line.start_date_key || "x"}`;
+}
+
 function UsersPage() {
   const toUiStatus = (status) => {
     const s = String(status || "").toUpperCase();
@@ -50,6 +79,8 @@ function UsersPage() {
   const [editIsAdmin, setEditIsAdmin] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [extendKey, setExtendKey] = useState(null);
+  const [extendMessage, setExtendMessage] = useState("");
   const sentinelRef = useRef(null);
 
   useEffect(() => {
@@ -168,6 +199,7 @@ function UsersPage() {
     setDetailLoading(true);
     setDetailError("");
     setSaveMessage("");
+    setExtendMessage("");
     try {
       const response = await fetch(`/api/admin/users/${memberNo}`, { credentials: "include" });
       const data = await response.json().catch(() => null);
@@ -184,10 +216,63 @@ function UsersPage() {
     }
   };
 
+  const refreshUserDetail = async (memberNo) => {
+    setExtendMessage("");
+    try {
+      const response = await fetch(`/api/admin/users/${memberNo}`, { credentials: "include" });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "회원 정보를 다시 불러오지 못했습니다.");
+      }
+      setSelectedUser(data);
+      setEditStatus(toUiStatus(data?.user?.status || "ACTIVE"));
+      setEditIsAdmin(Boolean(data?.user?.is_admin));
+    } catch (err) {
+      setExtendMessage(err.message || "회원 정보를 다시 불러오지 못했습니다.");
+    }
+  };
+
+  const extendActiveSubscription = async (line, addDays) => {
+    if (!selectedUser?.user?.member_no) {
+      return;
+    }
+    const key = subscriptionLineKey(line);
+    setExtendKey(key);
+    setExtendMessage("");
+    try {
+      const body = {
+        paymentNo: Number(line.payment_no),
+        productNo: Number(line.product_no),
+        addDays,
+        startDateKey: line.start_date_key || null,
+      };
+      const response = await fetch(
+        `/api/admin/users/${selectedUser.user.member_no}/subscription/extend`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.message || "구독 연장에 실패했습니다.");
+      }
+      setExtendMessage("구독 기간이 연장되었습니다.");
+      await refreshUserDetail(selectedUser.user.member_no);
+    } catch (err) {
+      setExtendMessage(err.message || "구독 연장에 실패했습니다.");
+    } finally {
+      setExtendKey(null);
+    }
+  };
+
   const closeModal = () => {
     setSelectedUser(null);
     setDetailError("");
     setSaveMessage("");
+    setExtendMessage("");
   };
 
   const saveUserSettings = async () => {
@@ -359,12 +444,89 @@ function UsersPage() {
             </div>
 
             <div className="admin-user-active-products">
-              <p className="admin-user-detail-label">활성 구독 상품</p>
+              <p className="admin-user-detail-label">활성 구독 상품 요약</p>
               <p className="confirm-help-text">
                 {(selectedUser.activeProducts || []).length > 0
-                  ? selectedUser.activeProducts.map((p) => `${p.product_name}(${p.active_count})`).join(", ")
+                  ? selectedUser.activeProducts.map((p) => `${p.product_name}(${p.active_count})건`).join(", ")
                   : "현재 활성 구독 상품이 없습니다."}
               </p>
+            </div>
+
+            <div className="admin-user-subscription-extend">
+              <p className="admin-user-detail-label">활성 구독 기간 조정</p>
+              
+              {(selectedUser.activeSubscriptionLines || []).length > 0 ? (
+                <div className="admin-user-subscription-table-wrap">
+                  <table className="admin-user-subscription-table">
+                    <thead>
+                      <tr>
+                        <th>상품</th>
+                        <th>시작</th>
+                        <th>종료</th>
+                        <th>연장</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedUser.activeSubscriptionLines.map((line) => {
+                        const k = subscriptionLineKey(line);
+                        const busy = extendKey === k;
+                        return (
+                          <tr key={k}>
+                            <td>{line.product_name || `#${line.product_no}`}</td>
+                            <td>{formatDateKo(line.start_date)}</td>
+                            <td>
+                              {line.end_date == null ? (
+                                <span className="admin-user-sub-end-none">무제한</span>
+                              ) : (
+                                formatDateKo(line.end_date)
+                              )}
+                            </td>
+                            <td>
+                              <div className="admin-user-subscription-actions">
+                                <button
+                                  type="button"
+                                  className="btn-sub-extend"
+                                  disabled={busy}
+                                  onClick={() => extendActiveSubscription(line, 7)}
+                                >
+                                  {busy ? "…" : "+7일"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-sub-extend"
+                                  disabled={busy}
+                                  onClick={() => extendActiveSubscription(line, 30)}
+                                >
+                                  {busy ? "…" : "+30일"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-sub-extend"
+                                  disabled={busy}
+                                  onClick={() => extendActiveSubscription(line, 90)}
+                                >
+                                  {busy ? "…" : "+90일"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="confirm-help-text">조정할 활성 구독 라인이 없습니다.</p>
+              )}
+              {extendMessage ? (
+                <p
+                  className={
+                    extendMessage.includes("연장되었") ? "field-success" : "field-error"
+                  }
+                >
+                  {extendMessage}
+                </p>
+              ) : null}
             </div>
 
             <div className="admin-user-edit-row">

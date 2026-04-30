@@ -962,6 +962,79 @@ td {
   margin-bottom: 10px;
 }
 
+.admin-user-subscription-extend {
+  margin-bottom: 18px;
+}
+
+.admin-user-subscription-hint {
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-user-subscription-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.admin-user-subscription-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-user-subscription-table th,
+.admin-user-subscription-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-user-subscription-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-gray);
+}
+
+.admin-user-subscription-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-user-sub-end-none {
+  color: var(--text-gray);
+  font-size: 12px;
+}
+
+.admin-user-subscription-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.btn-sub-extend {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.btn-sub-extend:hover:not(:disabled) {
+  background: #f0f7ff;
+}
+
+.btn-sub-extend:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .admin-user-edit-row {
   display: flex;
   gap: 12px;
@@ -1452,7 +1525,7 @@ td {
 
 .confirm-modal {
   width: 100%;
-  max-width: 440px;
+  max-width: 600px;
   border-radius: 14px;
   background: var(--white);
   padding: 22px;
